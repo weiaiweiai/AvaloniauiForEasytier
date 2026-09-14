@@ -22,6 +22,9 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="SukiUI" Version="7.0.1" />
+    <PackageReference Include="NLog" Version="5.4.0" />
+    <PackageReference Include="FreeSql" Version="3.5.308" />
+    <PackageReference Include="FreeSql.Provider.Sqlite" Version="3.5.308" />
   </ItemGroup>
 
   <!-- Windows FFI 和网络驱动旁置文件；源文件由 EasyTier 构建产物提供，不提交二进制到应用源码。 -->

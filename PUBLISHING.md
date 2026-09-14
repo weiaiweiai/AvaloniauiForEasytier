@@ -59,6 +59,23 @@ Windows 输出目录。`easytier_ffi.dll` 使用旁置加载方式，不能只�
 Linux 发布需要在 Linux 主机上单独编译 `libeasytier_ffi.so`，并将它放在 Linux
 发布目录中。
 
+## 应用日志
+
+应用使用 NLog 统一记录运行日志。普通日志会写入控制台和按日期滚动的文本文件，
+只有 `Error` 与 `Fatal` 级别的关键日志会通过 FreeSql 异步写入本地 SQLite。
+因此不会将所有运行输出复制到数据库中。
+
+数据目录由 .NET 跨平台 API 决定：
+
+```text
+Windows: %LOCALAPPDATA%/AvaloniauiForEasytier/
+Linux:   ~/.local/share/AvaloniauiForEasytier/
+```
+
+目录中的 `logs/application-YYYY-MM-DD.log` 保存普通日志，
+`critical-logs.db` 保存关键日志。SQLite 不可用时，NLog 仍会继续写入控制台和文本文件，
+不会阻断应用启动。
+
 ## 平台限制
 
 Native AOT 不支持从 Windows 直接交叉编译 Linux 本机程序，也不支持从 Linux 直接交叉编译 Windows 本机程序。Windows 包需在 Windows 构建，Linux 包需在 Linux 构建，可分别使用对应系统的本机环境或持续集成任务。
