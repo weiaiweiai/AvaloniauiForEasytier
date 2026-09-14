@@ -1,0 +1,17 @@
+.easytier-src/
+**/bin/
+**/obj/
+publish-aot-test/
+pelican-ride.html
+
+# Visual Studio and Rider user-local files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE/editor caches
+.idea/
+.vscode/
+.vscode/*.log

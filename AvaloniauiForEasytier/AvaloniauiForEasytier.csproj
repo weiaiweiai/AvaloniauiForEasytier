@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Version>0.1.0</Version>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <EasyTierWindowsFfiRoot Condition="'$(EasyTierWindowsFfiRoot)' == ''">$(MSBuildThisFileDirectory)../.easytier-src/target/x86_64-pc-windows-msvc/release</EasyTierWindowsFfiRoot>
+    <EasyTierWindowsNativeRoot Condition="'$(EasyTierWindowsNativeRoot)' == ''">$(MSBuildThisFileDirectory)../.easytier-src/easytier/third_party/x86_64</EasyTierWindowsNativeRoot>
+    <EasyTierLinuxFfiRoot Condition="'$(EasyTierLinuxFfiRoot)' == ''">$(MSBuildThisFileDirectory)../.easytier-src/target/x86_64-unknown-linux-gnu/release</EasyTierLinuxFfiRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="SukiUI" Version="7.0.1" />
+  </ItemGroup>
+
+  <!-- Windows FFI 和网络驱动旁置文件；源文件由 EasyTier 构建产物提供，不提交二进制到应用源码。 -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'linux-x64' And Exists('$(EasyTierWindowsFfiRoot)\easytier_ffi.dll')">
+    <None Include="$(EasyTierWindowsFfiRoot)\easytier_ffi.dll" Link="easytier_ffi.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="$(EasyTierWindowsNativeRoot)\Packet.dll" Link="Packet.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="$(EasyTierWindowsNativeRoot)\wintun.dll" Link="wintun.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="$(EasyTierWindowsNativeRoot)\WinDivert64.sys" Link="WinDivert64.sys" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- Linux FFI 需要在 Linux 主机上构建后放入此目录，再执行 Linux 发布。 -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64' And Exists('$(EasyTierLinuxFfiRoot)\libeasytier_ffi.so')">
+    <None Include="$(EasyTierLinuxFfiRoot)\libeasytier_ffi.so" Link="libeasytier_ffi.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+</Project>

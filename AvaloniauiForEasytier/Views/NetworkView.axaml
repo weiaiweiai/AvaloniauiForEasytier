@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AvaloniauiForEasytier.Views.NetworkView">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.page-title">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#17212F" />
+        </Style>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#17212F" />
+        </Style>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="#667085" />
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#475467" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#D9DEE6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Button.toolbar">
+            <Setter Property="Height" Value="31" />
+            <Setter Property="Padding" Value="11,5" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="#0F9F8F" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#344054" />
+            <Setter Property="BorderBrush" Value="#C7CED8" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="18,14" RowDefinitions="38,16,*">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Classes="page-title" Text="网络配置" />
+                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="管理本机的虚拟网络连接参数" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7">
+                <Button Classes="toolbar outline" Content="导入" />
+                <Button Classes="toolbar outline" Content="导出" />
+                <Button Classes="toolbar accent" Content="保存配置" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="224,12,*">
+            <Border Grid.Column="0" Classes="panel">
+                <Grid RowDefinitions="42,Auto,*">
+                    <Border Grid.Row="0" Padding="13,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="section-title" VerticalAlignment="Center" Text="配置列表" />
+                            <Button Grid.Column="1" Width="26" Height="26" Padding="4" Background="Transparent" ToolTip.Tip="新建配置">
+                                <PathIcon Width="15" Height="15" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="1" Margin="10" Padding="9" Background="#F7F8FA" BorderBrush="#D9DEE6" BorderThickness="1" CornerRadius="5">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="#98A2B3" />
+                            <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="3">
+                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#344054" Text="新建配置" />
+                                <TextBlock FontSize="10" Foreground="#98A2B3" Text="尚未保存" />
+                            </StackPanel>
+                            <PathIcon Grid.Column="2" Width="14" Height="14" Foreground="#98A2B3" Data="M9,3L10.41,4.41L5.83,9H21V11H5.83L10.41,15.59L9,17L2,10L9,3Z" />
+                        </Grid>
+                    </Border>
+                    <StackPanel Grid.Row="2" Margin="10,3">
+                        <TextBlock Classes="muted" FontSize="11" Text="没有其他配置" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Classes="panel">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="20,16,20,20" RowDefinitions="Auto,18,Auto,18,Auto,18,Auto">
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section-title" FontSize="15" Text="新建网络配置" />
+                                <TextBlock Classes="muted" FontSize="11" Text="配置会保存到本机，仅用于启动 EasyTier Core。" />
+                            </StackPanel>
+                            <Border Grid.Column="1" Padding="8,4" Background="#FFF7E6" CornerRadius="4">
+                                <TextBlock FontSize="10" Foreground="#9A5B08" Text="未保存" />
+                            </Border>
+                        </Grid>
+
+                        <Border Grid.Row="2" Classes="panel" Background="#FBFCFD" Padding="15">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
+                                <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="基础信息" />
+                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="配置名称" />
+                                <TextBox x:Name="InstanceNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="例如：办公室网络" />
+                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="虚拟网络名称" />
+                                <TextBox x:Name="NetworkNameTextBox" Grid.Row="2" Grid.Column="1" Height="30" PlaceholderText="填写网络标识" />
+                                <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="虚拟网段" />
+                                <TextBox x:Name="Ipv4TextBox" Grid.Row="2" Grid.Column="3" Height="30" PlaceholderText="例如：10.126.0.1/24" />
+                                <TextBlock Grid.Row="3" Classes="field-label" VerticalAlignment="Center" Text="本机节点名称" />
+                                <TextBox Grid.Row="3" Grid.Column="1" Height="30" PlaceholderText="可选" />
+                                <TextBlock Grid.Row="3" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="启动时自动连接" />
+                                <ToggleSwitch Grid.Row="3" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="4" Classes="panel" Background="#FBFCFD" Padding="15">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
+                                <Grid Grid.ColumnSpan="4" ColumnDefinitions="*,Auto">
+                                    <TextBlock Classes="section-title" Text="连接参数" />
+                                    <TextBlock Grid.Column="1" Classes="muted" FontSize="10" Text="可在 EasyTier 文档中获取参数说明" />
+                                </Grid>
+                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="入口节点地址" />
+                                <TextBox x:Name="PeerTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="例如：tcp://example.com:11010" />
+                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="认证密钥" />
+                                <TextBox x:Name="NetworkSecretTextBox" Grid.Row="2" Grid.Column="1" Height="30" PasswordChar="*" PlaceholderText="可选" />
+                                <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="连接模式" />
+                                <ComboBox Grid.Row="2" Grid.Column="3" Height="30" SelectedIndex="0">
+                                    <ComboBoxItem Content="点对点" />
+                                    <ComboBoxItem Content="通过公共入口" />
+                                    <ComboBoxItem Content="仅本地" />
+                                </ComboBox>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="6" Classes="panel" Background="#FBFCFD" Padding="15">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
+                                <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="高级选项" />
+                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="启用 IPv6" />
+                                <ToggleSwitch Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
+                                <TextBlock Grid.Row="1" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="允许局域网转发" />
+                                <ToggleSwitch Grid.Row="1" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
+                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="自定义启动参数" />
+                                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="可选，多个参数以空格分隔" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
