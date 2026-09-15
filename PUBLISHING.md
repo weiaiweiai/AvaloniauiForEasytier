@@ -65,11 +65,10 @@ Linux 发布需要在 Linux 主机上单独编译 `libeasytier_ffi.so`，并将�
 只有 `Error` 与 `Fatal` 级别的关键日志会通过 FreeSql 异步写入本地 SQLite。
 因此不会将所有运行输出复制到数据库中。
 
-数据目录由 .NET 跨平台 API 决定：
+日志根目录由 `.NET` 跨平台 API `AppContext.BaseDirectory` 决定，即软件根目录：
 
 ```text
-Windows: %LOCALAPPDATA%/AvaloniauiForEasytier/
-Linux:   ~/.local/share/AvaloniauiForEasytier/
+Windows/Linux: <软件根目录>/
 ```
 
 目录中的 `logs/application-YYYY-MM-DD.log` 保存普通日志，

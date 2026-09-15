@@ -173,14 +173,11 @@ public static class ApplicationLogging
     }
 
     /// <summary>
-    /// 获取跨平台的应用数据目录。
+    /// 获取软件根目录，用于存放日志文件和关键日志数据库。
     /// </summary>
-    /// <returns>应用数据目录，类型为字符串，返回绝对路径。</returns>
+    /// <returns>软件根目录，类型为字符串，返回可执行文件所在的绝对路径。</returns>
     private static string GetApplicationDataDirectory()
     {
-        var localApplicationData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return string.IsNullOrWhiteSpace(localApplicationData)
-            ? Path.Combine(AppContext.BaseDirectory, "data")
-            : Path.Combine(localApplicationData, "AvaloniauiForEasytier");
+        return AppContext.BaseDirectory;
     }
 }
