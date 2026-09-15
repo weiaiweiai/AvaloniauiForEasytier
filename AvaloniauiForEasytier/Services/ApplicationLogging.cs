@@ -18,7 +18,7 @@ public static class ApplicationLogging
     private static IFreeSql? _freeSql;
     private static bool _initialized; // 标记日志模块是否已经完成初始化。
     private static bool _criticalDatabaseAvailable; // 标记关键日志数据库当前是否可用。
-    private static string? _criticalDatabasePath;
+    private static string? _applicationDatabasePath;
 
     /// <summary>
     /// 获取关键日志 SQLite 当前是否可用。
@@ -35,15 +35,15 @@ public static class ApplicationLogging
     }
 
     /// <summary>
-    /// 获取关键日志 SQLite 文件路径。
+    /// 获取应用 SQLite 数据库文件路径。
     /// </summary>
-    public static string? CriticalDatabasePath
+    public static string? ApplicationDatabasePath
     {
         get
         {
             lock (SyncRoot)
             {
-                return _criticalDatabasePath;
+                return _applicationDatabasePath;
             }
         }
     }
@@ -87,9 +87,9 @@ public static class ApplicationLogging
             Exception? databaseException = null;
             try
             {
-                _criticalDatabasePath = Path.Combine(dataDirectory, "critical-logs.db");
+                _applicationDatabasePath = Path.Combine(dataDirectory, "application.db");
                 _freeSql = new FreeSqlBuilder()
-                    .UseConnectionString(DataType.Sqlite, $"Data Source={_criticalDatabasePath}")
+                    .UseConnectionString(DataType.Sqlite, $"Data Source={_applicationDatabasePath}")
                     .UseAutoSyncStructure(false)
                     .Build();
                 _freeSql.CodeFirst.SyncStructure<CriticalLogRecord>();
@@ -123,7 +123,7 @@ public static class ApplicationLogging
             logger.Info("日志模块已初始化，普通日志写入文件和控制台");
             if (databaseException is null)
             {
-                logger.Info("关键日志将写入 SQLite：{0}", _criticalDatabasePath);
+                logger.Info("关键日志将写入 SQLite：{0}", _applicationDatabasePath);
             }
             else
             {

@@ -72,7 +72,7 @@ Windows/Linux: <软件根目录>/
 ```
 
 目录中的 `logs/application-YYYY-MM-DD.log` 保存普通日志，
-`critical-logs.db` 保存关键日志。SQLite 不可用时，NLog 仍会继续写入控制台和文本文件，
+`application.db` 保存关键日志及后续应用数据。SQLite 不可用时，NLog 仍会继续写入控制台和文本文件，
 不会阻断应用启动。
 
 ## 平台限制
