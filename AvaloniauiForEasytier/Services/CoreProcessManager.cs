@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog;
 
 namespace AvaloniauiForEasytier.Services;
 
@@ -104,6 +105,7 @@ public sealed class CoreStatusChangedEventArgs : EventArgs
 /// </summary>
 public sealed class CoreProcessManager : IEasyTierRuntime
 {
+    private static readonly Logger Logger = ApplicationLogging.GetLogger(nameof(CoreProcessManager));
     private readonly object _syncRoot = new();
     private Process? _process;
     private CancellationTokenSource? _lifetimeCancellation;
@@ -609,6 +611,16 @@ public sealed class CoreProcessManager : IEasyTierRuntime
     /// <param name="message">输出文本，类型为字符串，取值为任意非空文本，必填。</param>
     private void PublishOutput(CoreOutputKind kind, string message)
     {
+        // 运行时输出同时写入统一日志文件，确保界面日志与持久化日志来源一致。
+        if (kind == CoreOutputKind.StandardError)
+        {
+            Logger.Error("EasyTier Core：{0}", message);
+        }
+        else
+        {
+            Logger.Info("EasyTier Core：{0}", message);
+        }
+
         OutputReceived?.Invoke(this, new CoreOutputEventArgs(kind, message));
     }
 
