@@ -42,43 +42,46 @@
             <Setter Property="BorderBrush" Value="#C7CED8" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
+        <Style Selector="Button.profile-item">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.profile-item.selected">
+            <Setter Property="Background" Value="#E7F5F2" />
+            <Setter Property="BorderBrush" Value="#0F9F8F" />
+        </Style>
     </UserControl.Styles>
 
     <Grid Margin="18,14" RowDefinitions="38,16,*">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Classes="page-title" Text="网络配置" />
-                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="管理本机的虚拟网络连接参数" />
+                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="每个网络独立配置参数并单独启停" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7">
                 <Button Classes="toolbar outline" Content="导入" />
                 <Button Classes="toolbar outline" Content="导出" />
-                <Button x:Name="SaveProfileButton" Classes="toolbar accent" Content="保存配置" />
+                <Button x:Name="SaveProfileButton" Classes="toolbar accent" Content="保存网络" />
             </StackPanel>
         </Grid>
 
         <Grid Grid.Row="2" ColumnDefinitions="224,12,*">
             <Border Grid.Column="0" Classes="panel">
-                <Grid RowDefinitions="42,Auto,*">
+                <Grid RowDefinitions="42,*">
                     <Border Grid.Row="0" Padding="13,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Classes="section-title" VerticalAlignment="Center" Text="配置列表" />
-                            <Button x:Name="NewProfileButton" Grid.Column="1" Width="26" Height="26" Padding="4" Background="Transparent" ToolTip.Tip="新建配置">
+                            <TextBlock Classes="section-title" VerticalAlignment="Center" Text="网络列表" />
+                            <Button x:Name="NewProfileButton" Grid.Column="1" Width="26" Height="26" Padding="4" Background="Transparent" ToolTip.Tip="新建网络">
                                 <PathIcon Width="15" Height="15" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
                             </Button>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="1" Margin="10" Padding="9" Background="#F7F8FA" BorderBrush="#D9DEE6" BorderThickness="1" CornerRadius="5">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="#98A2B3" />
-                            <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="3">
-                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#344054" Text="新建配置" />
-                                <TextBlock FontSize="10" Foreground="#98A2B3" Text="尚未保存" />
-                            </StackPanel>
-                            <PathIcon Grid.Column="2" Width="14" Height="14" Foreground="#98A2B3" Data="M9,3L10.41,4.41L5.83,9H21V11H5.83L10.41,15.59L9,17L2,10L9,3Z" />
-                        </Grid>
-                    </Border>
-                    <StackPanel x:Name="ProfileListPanel" Grid.Row="2" Margin="10,3">
+                    <StackPanel x:Name="ProfileListPanel" Grid.Row="1" Margin="10,3">
                     </StackPanel>
                 </Grid>
             </Border>
@@ -88,12 +91,12 @@
                     <Grid Margin="20,16,20,20" RowDefinitions="Auto,18,Auto,18,Auto,18,Auto">
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="4">
-                                <TextBlock Classes="section-title" FontSize="15" Text="网络配置" />
-                                <TextBlock Classes="muted" FontSize="11" Text="每个配置可独立启动，多个网络可以同时运行。" />
+                                <TextBlock x:Name="EditorTitleText" Classes="section-title" FontSize="15" Text="未选择网络" />
+                                <TextBlock Classes="muted" FontSize="11" Text="以下参数仅作用于当前选中的网络。" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                                 <Border Padding="8,4" Background="#FFF7E6" CornerRadius="4">
-                                    <TextBlock x:Name="ProfileStatusText" FontSize="10" Foreground="#9A5B08" Text="未选择配置" />
+                                    <TextBlock x:Name="ProfileStatusText" FontSize="10" Foreground="#9A5B08" Text="未选择网络" />
                                 </Border>
                                 <Button x:Name="StartProfileButton" Classes="toolbar accent" Content="启动网络" />
                                 <Button x:Name="StopProfileButton" Classes="toolbar outline" Content="停止网络" />
@@ -104,7 +107,7 @@
                         <Border Grid.Row="2" Classes="panel" Background="#FBFCFD" Padding="15">
                             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
                                 <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="基础信息" />
-                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="配置名称" />
+                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="网络名称" />
                                 <TextBox x:Name="ProfileNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="例如：办公室网络" />
                                 <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="实例名称" />
                                 <TextBox x:Name="InstanceNameTextBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="EasyTier FFI 唯一实例名" />

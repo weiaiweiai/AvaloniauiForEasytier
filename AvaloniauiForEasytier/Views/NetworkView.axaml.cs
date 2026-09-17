@@ -1,5 +1,9 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using AvaloniauiForEasytier.Services;
 using System;
@@ -9,10 +13,15 @@ using System.Linq;
 namespace AvaloniauiForEasytier.Views;
 
 /// <summary>
-/// 管理多个 EasyTier 网络配置及其独立运行状态。
+/// 管理多个 EasyTier 网络及其独立运行状态。
 /// </summary>
 public partial class NetworkView : UserControl
 {
+    private static readonly IBrush StatusRunningBrush = new SolidColorBrush(Color.Parse("#12B76A"));
+    private static readonly IBrush StatusTransitionBrush = new SolidColorBrush(Color.Parse("#D97706"));
+    private static readonly IBrush StatusFailedBrush = new SolidColorBrush(Color.Parse("#F04438"));
+    private static readonly IBrush StatusStoppedBrush = new SolidColorBrush(Color.Parse("#98A2B3"));
+
     private readonly NetworkProfileRepository? _repository;
     private readonly NetworkRuntimeManager? _runtimeManager;
     private NetworkProfile? _selectedProfile;
@@ -50,7 +59,7 @@ public partial class NetworkView : UserControl
     }
 
     /// <summary>
-    /// 只刷新左侧配置列表中的运行状态，不覆盖右侧未保存编辑内容。
+    /// 只刷新左侧网络列表中的运行状态，不覆盖右侧未保存编辑内容。
     /// </summary>
     private void RefreshProfileListStatus()
     {
@@ -60,15 +69,16 @@ public partial class NetworkView : UserControl
         {
             if (ProfileListPanel.Children.FirstOrDefault(control => control is Button button && button.Tag is long id && id == profile.Id) is Button button)
             {
-                button.Content = $"{profile.ProfileName}\n{GetStatusText(profile.InstanceName)}";
+                // 只重建列表项内容，保留选中高亮样式类。
+                button.Content = BuildProfileItemContent(profile, _runtimeManager?.GetStatus(profile.InstanceName) ?? CoreProcessStatus.Stopped);
             }
         }
     }
 
     /// <summary>
-    /// 读取数据库中的配置并重建左侧列表。
+    /// 读取数据库中的网络并重建左侧列表。
     /// </summary>
-    /// <param name="selectedId">需要重新选中的配置主键，类型为 long 可空值，取值为已存在主键或空，非必填。</param>
+    /// <param name="selectedId">需要重新选中的网络主键，类型为 long 可空值，取值为已存在主键或空，非必填。</param>
     private void LoadProfiles(long? selectedId)
     {
         if (_repository is null) return;
@@ -78,18 +88,76 @@ public partial class NetworkView : UserControl
         {
             var button = new Button
             {
-                Content = $"{profile.ProfileName}\n{GetStatusText(profile.InstanceName)}",
+                Content = BuildProfileItemContent(profile, _runtimeManager?.GetStatus(profile.InstanceName) ?? CoreProcessStatus.Stopped),
                 Tag = profile.Id,
-                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
-                Margin = new Avalonia.Thickness(0, 0, 0, 5),
-                Padding = new Avalonia.Thickness(9, 7)
+                Margin = new Thickness(0, 0, 0, 5)
             };
+            button.Classes.Add("profile-item");
             button.Click += ProfileButton_Click;
             ProfileListPanel.Children.Add(button);
         }
         var idToSelect = selectedId ?? profiles.FirstOrDefault()?.Id;
         if (idToSelect.HasValue) SelectProfile(idToSelect.Value); else ClearEditor();
+    }
+
+    /// <summary>
+    /// 构造网络列表中一个列表项的显示内容。
+    /// </summary>
+    /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
+    /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
+    /// <returns>列表项内容控件，类型为 Control。</returns>
+    private static Control BuildProfileItemContent(NetworkProfile profile, CoreProcessStatus status)
+    {
+        var content = new StackPanel { Spacing = 3 };
+        content.Children.Add(new TextBlock
+        {
+            Text = profile.ProfileName,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.Parse("#344054")),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+
+        // 副行显示状态圆点和网段摘要，体现每个网络的独立运行状态。
+        var subnet = string.IsNullOrWhiteSpace(profile.Ipv4) ? null : profile.Ipv4.Trim();
+        var detailPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        detailPanel.Children.Add(new Ellipse
+        {
+            Width = 7,
+            Height = 7,
+            VerticalAlignment = VerticalAlignment.Center,
+            Fill = GetStatusBrush(status)
+        });
+        detailPanel.Children.Add(new TextBlock
+        {
+            Text = subnet is null ? GetStatusText(status) : $"{GetStatusText(status)} · {subnet}",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(Color.Parse("#667085")),
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(detailPanel);
+        return content;
+    }
+
+    /// <summary>刷新左侧网络列表的选中高亮。</summary>
+    private void UpdateProfileListSelection()
+    {
+        var selectedId = _selectedProfile?.Id ?? 0;
+        foreach (var button in ProfileListPanel.Children.OfType<Button>())
+        {
+            var id = button.Tag as long? ?? 0;
+
+            // 只有主键匹配选中网络的列表项显示选中状态；未保存的新网络不高亮任何项。
+            if (id != 0 && id == selectedId)
+            {
+                button.Classes.Add("selected");
+            }
+            else
+            {
+                button.Classes.Remove("selected");
+            }
+        }
     }
 
     /// <summary>
@@ -118,6 +186,8 @@ public partial class NetworkView : UserControl
         HostnameTextBox.Text = _selectedProfile.Hostname;
         PeerTextBox.Text = _selectedProfile.PeerUris;
         AutoStartToggle.IsChecked = _selectedProfile.AutoStart;
+        EditorTitleText.Text = $"网络：{_selectedProfile.ProfileName}";
+        UpdateProfileListSelection();
         UpdateEditorStatus();
     }
 
@@ -134,6 +204,8 @@ public partial class NetworkView : UserControl
         NetworkNameTextBox.Text = _selectedProfile.NetworkName;
         NetworkSecretTextBox.Text = Ipv4TextBox.Text = HostnameTextBox.Text = PeerTextBox.Text = string.Empty;
         AutoStartToggle.IsChecked = false;
+        EditorTitleText.Text = $"网络：{_selectedProfile.ProfileName}（未保存）";
+        UpdateProfileListSelection();
         UpdateEditorStatus();
     }
 
@@ -161,11 +233,11 @@ public partial class NetworkView : UserControl
         profile.Hostname = EmptyToNull(HostnameTextBox.Text);
         profile.PeerUris = EmptyToNull(PeerTextBox.Text);
         profile.AutoStart = AutoStartToggle.IsChecked == true;
-        if (_repository.IsInstanceNameUsed(profile.InstanceName, profile.Id)) { ProfileStatusText.Text = "实例名称已被其他配置使用"; return; }
+        if (_repository.IsInstanceNameUsed(profile.InstanceName, profile.Id)) { ProfileStatusText.Text = "实例名称已被其他网络使用"; return; }
         _repository.Save(profile);
         _selectedProfile = profile;
         LoadProfiles(profile.Id);
-        ProfileStatusText.Text = "配置已保存";
+        ProfileStatusText.Text = "网络已保存";
     }
 
     /// <summary>
@@ -205,7 +277,7 @@ public partial class NetworkView : UserControl
     /// <summary>更新编辑器中的实例运行状态和可用操作。</summary>
     private void UpdateEditorStatus()
     {
-        if (_selectedProfile is null || _runtimeManager is null) { ProfileStatusText.Text = "未选择配置"; return; }
+        if (_selectedProfile is null || _runtimeManager is null) { ProfileStatusText.Text = "未选择网络"; return; }
         var status = _runtimeManager.GetStatus(_selectedProfile.InstanceName);
         ProfileStatusText.Text = GetStatusText(status);
         StartProfileButton.IsEnabled = status is CoreProcessStatus.Stopped or CoreProcessStatus.Failed;
@@ -218,6 +290,8 @@ public partial class NetworkView : UserControl
         _selectedProfile = null;
         InstanceNameTextBox.Text = ProfileNameTextBox.Text = NetworkNameTextBox.Text = NetworkSecretTextBox.Text = Ipv4TextBox.Text = HostnameTextBox.Text = PeerTextBox.Text = string.Empty;
         AutoStartToggle.IsChecked = false;
+        EditorTitleText.Text = "未选择网络";
+        UpdateProfileListSelection();
         UpdateEditorStatus();
     }
 
@@ -234,6 +308,19 @@ public partial class NetworkView : UserControl
     /// <param name="status">运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
     /// <returns>状态文本，类型为字符串。</returns>
     private static string GetStatusText(CoreProcessStatus status) => status switch { CoreProcessStatus.Running => "运行中", CoreProcessStatus.Starting => "启动中", CoreProcessStatus.Stopping => "停止中", CoreProcessStatus.Failed => "异常", _ => "已停止" };
+
+    /// <summary>
+    /// 获取运行状态对应的显示颜色。
+    /// </summary>
+    /// <param name="status">运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
+    /// <returns>状态颜色画刷，类型为 IBrush。</returns>
+    private static IBrush GetStatusBrush(CoreProcessStatus status) => status switch
+    {
+        CoreProcessStatus.Running => StatusRunningBrush,
+        CoreProcessStatus.Starting or CoreProcessStatus.Stopping => StatusTransitionBrush,
+        CoreProcessStatus.Failed => StatusFailedBrush,
+        _ => StatusStoppedBrush
+    };
 
     /// <summary>
     /// 将空白文本转换为可空字段。
