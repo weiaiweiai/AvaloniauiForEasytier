@@ -3,149 +3,87 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using AvaloniauiForEasytier.Services;
 using System;
-using System.Threading.Tasks;
 
 namespace AvaloniauiForEasytier.Views;
 
+/// <summary>
+/// 显示多个 EasyTier 网络的汇总状态和批量控制操作。
+/// </summary>
 public partial class HomeView : UserControl
 {
-    private readonly IEasyTierRuntime _runtime;
+    private readonly NetworkProfileRepository? _repository;
+    private readonly NetworkRuntimeManager? _runtimeManager;
+
+    /// <summary>初始化设计器使用的主页视图。</summary>
+    public HomeView() { InitializeComponent(); }
 
     /// <summary>
-    /// 初始化设计器使用的主页视图。
+    /// 初始化多网络主页。
     /// </summary>
-    public HomeView()
-        : this(new CoreProcessManager())
+    /// <param name="repository">网络配置仓储，类型为 NetworkProfileRepository，不可为空，必填。</param>
+    /// <param name="runtimeManager">多实例运行时管理器，类型为 NetworkRuntimeManager，不可为空，必填。</param>
+    public HomeView(NetworkProfileRepository repository, NetworkRuntimeManager runtimeManager)
     {
-    }
-
-    /// <summary>
-    /// 初始化主页视图和 Core 状态订阅。
-    /// </summary>
-    /// <param name="runtime">EasyTier 运行时，类型为 IEasyTierRuntime，不可为空，必填。</param>
-    public HomeView(IEasyTierRuntime runtime)
-    {
-        _runtime = runtime;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));
         InitializeComponent();
         ServiceActionButton.Click += ServiceActionButton_Click;
-        _runtime.StatusChanged += CoreProcessManager_StatusChanged;
-        ApplyStatus(new CoreStatusChangedEventArgs(
-            _runtime.Status,
-            _runtime.ExecutablePath,
-            _runtime.LastMessage));
+        _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
+        ApplySummary();
     }
 
     /// <summary>
-    /// 响应 Core 状态变化并切换到 Avalonia UI 线程更新界面。
+    /// 响应任一网络状态变化并刷新主页汇总。
     /// </summary>
-    /// <param name="sender">触发事件的 Core 管理器，类型为对象，可为空，非必填。</param>
-    /// <param name="e">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
-    private void CoreProcessManager_StatusChanged(object? sender, CoreStatusChangedEventArgs e)
+    /// <param name="instanceName">发生变化的实例名称，类型为字符串，取值为非空名称，必填。</param>
+    /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
+    private void RuntimeManager_StatusChanged(string instanceName, CoreStatusChangedEventArgs eventArgs)
     {
-        Dispatcher.UIThread.Post(() => ApplyStatus(e));
+        Dispatcher.UIThread.Post(ApplySummary);
     }
 
     /// <summary>
-    /// 处理主页上的 Core 启动或停止按钮。
+    /// 启动或停止全部已保存网络。
     /// </summary>
     /// <param name="sender">触发事件的按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    /// <param name="e">路由事件参数，类型为 Avalonia.Interactivity.RoutedEventArgs，不可为空，必填。</param>
     private async void ServiceActionButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        // 启动或停止过程中不允许重复提交操作。
-        if (_runtime.Status is CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
-        {
-            return;
-        }
-
+        if (_repository is null || _runtimeManager is null) return;
         ServiceActionButton.IsEnabled = false;
-        bool operationSucceeded; // 标记本次启动或停止操作是否成功。
         try
         {
-            if (_runtime.IsRunning)
-            {
-                await _runtime.StopAsync();
-                operationSucceeded = true;
-            }
-            else
-            {
-                operationSucceeded = await _runtime.StartAsync();
-            }
+            if (_runtimeManager.IsAnyRunning) await _runtimeManager.StopAllAsync();
+            else await _runtimeManager.StartAllAsync(_repository.GetAll());
         }
         catch (Exception exception)
         {
-            operationSucceeded = false;
-            ApplyStatus(new CoreStatusChangedEventArgs(
-                CoreProcessStatus.Failed,
-                _runtime.ExecutablePath,
-                $"操作失败：{exception.Message}"));
+            ServiceControlHintText.Text = $"批量操作失败：{exception.Message}";
         }
         finally
         {
             ServiceActionButton.IsEnabled = true;
-        }
-
-        if (!operationSucceeded)
-        {
-            ApplyStatus(new CoreStatusChangedEventArgs(
-                _runtime.Status,
-                _runtime.ExecutablePath,
-                _runtime.LastMessage));
+            ApplySummary();
         }
     }
 
-    /// <summary>
-    /// 根据 Core 状态刷新主页上的状态文本和操作按钮。
-    /// </summary>
-    /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
-    private void ApplyStatus(CoreStatusChangedEventArgs eventArgs)
+    /// <summary>刷新主页上的运行数量和批量控制状态。</summary>
+    private void ApplySummary()
     {
-        switch (eventArgs.Status)
-        {
-            case CoreProcessStatus.Starting:
-                SetStatusVisual("启动中", "正在启动 EasyTier Core", "正在启动", "请稍候，正在创建 Core 进程", "#D97706", "停止");
-                break;
-            case CoreProcessStatus.Running:
-                SetStatusVisual("运行中", "EasyTier Core 正在运行", "运行中", "网络服务已启动，可以查看运行日志", "#12B76A", "停止服务");
-                break;
-            case CoreProcessStatus.Stopping:
-                SetStatusVisual("停止中", "正在关闭 EasyTier Core", "停止中", "正在等待 Core 进程退出", "#D97706", "停止");
-                break;
-            case CoreProcessStatus.Failed:
-                var errorMessage = string.IsNullOrWhiteSpace(eventArgs.Message)
-                    ? "EasyTier Core 启动失败"
-                    : eventArgs.Message;
-                SetStatusVisual("启动失败", errorMessage, "启动失败", errorMessage, "#D92D20", "启动服务");
-                break;
-            default:
-                SetStatusVisual("未运行", "EasyTier Core 等待启动", "未运行", "请选择配置后启动网络服务", "#D97706", "启动服务");
-                break;
-        }
-    }
-
-    /// <summary>
-    /// 设置主页服务控制区域的统一视觉状态。
-    /// </summary>
-    /// <param name="summary">概览状态文本，类型为字符串，取值为非空短文本，必填。</param>
-    /// <param name="summaryDescription">概览说明文本，类型为字符串，取值为非空文本，必填。</param>
-    /// <param name="controlStatus">控制区域状态文本，类型为字符串，取值为非空短文本，必填。</param>
-    /// <param name="controlDescription">控制区域主说明，类型为字符串，取值为非空文本，必填。</param>
-    /// <param name="indicatorColor">状态指示灯颜色，类型为十六进制颜色字符串，取值为有效颜色值，必填。</param>
-    /// <param name="actionText">操作按钮文本，类型为字符串，取值为非空命令文本，必填。</param>
-    private void SetStatusVisual(
-        string summary,
-        string summaryDescription,
-        string controlStatus,
-        string controlDescription,
-        string indicatorColor,
-        string actionText)
-    {
-        ServiceStatusText.Text = summary;
-        ServiceStatusDescriptionText.Text = summaryDescription;
-        ServiceControlStatusText.Text = controlStatus;
-        ServiceControlDescriptionText.Text = $"EasyTier Core {controlStatus}";
-        ServiceControlHintText.Text = controlDescription;
-        ServiceActionButton.Content = actionText;
-        ServiceStatusIndicator.Fill = new SolidColorBrush(Color.Parse(indicatorColor));
+        if (_runtimeManager is null || _repository is null) return;
+        var profiles = _repository.GetAll();
+        var runningCount = _runtimeManager.RunningCount;
+        var totalCount = profiles.Count;
+        ServiceStatusText.Text = runningCount > 0 ? "运行中" : "未运行";
+        ServiceStatusDescriptionText.Text = $"{runningCount} / {totalCount} 个网络正在运行";
+        CurrentNetworkText.Text = runningCount > 0 ? $"{runningCount} 个网络" : "未选择";
+        CurrentNetworkDescriptionText.Text = totalCount == 0 ? "没有网络配置" : $"已保存 {totalCount} 个网络配置";
+        ServiceControlStatusText.Text = runningCount > 0 ? $"{runningCount} 个网络运行中" : "全部网络已停止";
+        ServiceControlDescriptionText.Text = runningCount > 0 ? "EasyTier 多网络运行时" : "EasyTier 多网络运行时未运行";
+        ServiceControlHintText.Text = runningCount > 0 ? "再次操作将停止全部网络" : "启动后可在网络配置页单独管理实例";
+        ServiceActionButton.Content = runningCount > 0 ? "停止全部" : "启动全部";
+        ServiceStatusIndicator.Fill = new SolidColorBrush(runningCount > 0 ? Color.Parse("#12B76A") : Color.Parse("#98A2B3"));
+        NetworkCountText.Text = totalCount.ToString();
+        RunningCountText.Text = $"运行中 {runningCount}";
     }
 }

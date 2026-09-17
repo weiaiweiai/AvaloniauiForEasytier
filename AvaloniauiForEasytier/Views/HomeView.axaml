@@ -70,15 +70,15 @@
                     <Border Grid.Column="1" Classes="panel" Padding="13">
                         <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                             <TextBlock Classes="section-title" Text="当前网络" />
-                            <TextBlock Grid.Row="1" FontSize="21" FontWeight="SemiBold" Foreground="#17212F" Text="未选择" />
-                            <TextBlock Grid.Row="2" Classes="muted" FontSize="11" Text="没有活动网络配置" />
+                            <TextBlock x:Name="CurrentNetworkText" Grid.Row="1" FontSize="21" FontWeight="SemiBold" Foreground="#17212F" Text="未选择" />
+                            <TextBlock x:Name="CurrentNetworkDescriptionText" Grid.Row="2" Classes="muted" FontSize="11" Text="没有活动网络配置" />
                         </Grid>
                     </Border>
                     <Border Grid.Column="2" Classes="panel" Padding="13">
                         <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                             <TextBlock Classes="section-title" Text="在线节点" />
-                            <TextBlock Grid.Row="1" FontSize="21" FontWeight="SemiBold" Foreground="#17212F" Text="0" />
-                            <TextBlock Grid.Row="2" Classes="muted" FontSize="11" Text="总节点数 0" />
+                            <TextBlock x:Name="NetworkCountText" Grid.Row="1" FontSize="21" FontWeight="SemiBold" Foreground="#17212F" Text="0" />
+                            <TextBlock x:Name="RunningCountText" Grid.Row="2" Classes="muted" FontSize="11" Text="运行中 0" />
                         </Grid>
                     </Border>
                     <Border Grid.Column="3" Classes="panel" Padding="13">

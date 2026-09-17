@@ -49,6 +49,19 @@ public static class ApplicationLogging
     }
 
     /// <summary>
+    /// 获取已经初始化的应用通用数据库连接。
+    /// </summary>
+    /// <returns>FreeSql 数据库连接，类型为 IFreeSql。</returns>
+    /// <exception cref="InvalidOperationException">日志和数据库模块尚未初始化或数据库不可用时抛出。</exception>
+    public static IFreeSql GetRequiredDatabase()
+    {
+        lock (SyncRoot)
+        {
+            return _freeSql ?? throw new InvalidOperationException("应用数据库尚未初始化或当前不可用。");
+        }
+    }
+
+    /// <summary>
     /// 初始化 NLog 文件、控制台和关键日志数据库目标。
     /// </summary>
     public static void Initialize()
@@ -93,6 +106,7 @@ public static class ApplicationLogging
                     .UseAutoSyncStructure(false)
                     .Build();
                 _freeSql.CodeFirst.SyncStructure<CriticalLogRecord>();
+                _freeSql.CodeFirst.SyncStructure<NetworkProfile>();
 
                 var databaseTarget = new FreeSqlCriticalLogTarget(_freeSql)
                 {

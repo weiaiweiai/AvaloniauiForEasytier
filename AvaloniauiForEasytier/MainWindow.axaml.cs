@@ -7,13 +7,15 @@ using AvaloniauiForEasytier.Views;
 using SukiUI.Controls;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AvaloniauiForEasytier;
 
 public partial class MainWindow : SukiWindow
 {
-    private readonly IEasyTierRuntime _runtime;
+    private readonly NetworkRuntimeManager _runtimeManager;
+    private readonly NetworkProfileRepository _profileRepository;
     private readonly HomeView _homeView;
     private readonly NetworkView _networkView;
     private readonly NodesView _nodesView;
@@ -27,22 +29,22 @@ public partial class MainWindow : SukiWindow
     /// </summary>
     public MainWindow()
     {
-        _networkView = new NetworkView();
-        _runtime = new EasyTierFfiRuntime(_networkView.GetConfiguration, _networkView.GetInstanceName);
-        _homeView = new HomeView(_runtime);
+        _profileRepository = new NetworkProfileRepository(ApplicationLogging.GetRequiredDatabase());
+        EnsureDefaultProfile();
+        _runtimeManager = new NetworkRuntimeManager();
+        _networkView = new NetworkView(_profileRepository, _runtimeManager);
+        _homeView = new HomeView(_profileRepository, _runtimeManager);
         _nodesView = new NodesView();
         _routesView = new RoutesView();
-        _logsView = new LogsView(_runtime);
+        _logsView = new LogsView(_runtimeManager);
         _settingsView = new SettingsView();
         _aboutView = new AboutView();
         InitializeComponent();
         RegisterUiEvents();
-        _runtime.StatusChanged += CoreProcessManager_StatusChanged;
-        UpdateFooter(new CoreStatusChangedEventArgs(
-            _runtime.Status,
-            _runtime.ExecutablePath,
-            _runtime.LastMessage));
+        _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
+        UpdateFooter();
         PageHost.Content = _homeView;
+        _ = StartAutoStartNetworksAsync();
     }
 
     /// <summary>
@@ -63,11 +65,11 @@ public partial class MainWindow : SukiWindow
     /// <summary>
     /// 响应 Core 状态变化并刷新窗口底部状态栏。
     /// </summary>
-    /// <param name="sender">触发事件的 Core 管理器，类型为对象，可为空，非必填。</param>
-    /// <param name="e">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
-    private void CoreProcessManager_StatusChanged(object? sender, CoreStatusChangedEventArgs e)
+    /// <param name="instanceName">发生变化的实例名称，类型为字符串，取值为非空名称，必填。</param>
+    /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
+    private void RuntimeManager_StatusChanged(string instanceName, CoreStatusChangedEventArgs eventArgs)
     {
-        Dispatcher.UIThread.Post(() => UpdateFooter(e));
+        Dispatcher.UIThread.Post(UpdateFooter);
     }
 
     /// <summary>
@@ -77,33 +79,54 @@ public partial class MainWindow : SukiWindow
     /// <param name="e">关闭事件参数，类型为 EventArgs，不可为空，必填。</param>
     private async void MainWindow_Closed(object? sender, EventArgs e)
     {
-        await _runtime.DisposeAsync();
+        await _runtimeManager.DisposeAsync();
     }
 
     /// <summary>
-    /// 根据 Core 状态更新窗口底部状态栏。
+    /// 根据全部网络运行数量更新窗口底部状态栏。
     /// </summary>
-    /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
-    private void UpdateFooter(CoreStatusChangedEventArgs eventArgs)
+    private void UpdateFooter()
     {
-        FooterStatusText.Text = eventArgs.Status switch
+        var runningCount = _runtimeManager.RunningCount;
+        FooterStatusText.Text = runningCount > 0 ? $"{runningCount} 个网络运行中" : "网络未运行";
+        FooterStatusIndicator.Fill = new SolidColorBrush(runningCount > 0 ? Color.Parse("#12B76A") : Color.Parse("#98A2B3"));
+        CoreLocationText.Text = Path.GetFileName(_runtimeManager.NativeLibraryPath);
+        RunningNetworkCountText.Text = $"网络：{runningCount}";
+    }
+
+    /// <summary>
+    /// 首次运行时创建一个可直接编辑的默认配置。
+    /// </summary>
+    private void EnsureDefaultProfile()
+    {
+        if (_profileRepository.GetAll().Count > 0)
         {
-            CoreProcessStatus.Starting => "服务启动中",
-            CoreProcessStatus.Running => "服务运行中",
-            CoreProcessStatus.Stopping => "服务停止中",
-            CoreProcessStatus.Failed => "服务异常",
-            _ => "服务未运行"
-        };
-        FooterStatusIndicator.Fill = new SolidColorBrush(eventArgs.Status switch
+            return;
+        }
+
+        _profileRepository.Save(new NetworkProfile
         {
-            CoreProcessStatus.Running => Color.Parse("#12B76A"),
-            CoreProcessStatus.Failed => Color.Parse("#D92D20"),
-            CoreProcessStatus.Starting or CoreProcessStatus.Stopping => Color.Parse("#D97706"),
-            _ => Color.Parse("#98A2B3")
+            ProfileName = "默认网络", // 配置显示名称。
+            InstanceName = "easytier-desktop", // EasyTier FFI 实例名称。
+            NetworkName = "easytier", // 虚拟网络名称。
+            AutoStart = false // 默认不在应用启动时自动连接。
         });
-        CoreLocationText.Text = eventArgs.ExecutablePath is null
-            ? "路径未检测到"
-            : Path.GetFileName(eventArgs.ExecutablePath);
+    }
+
+    /// <summary>
+    /// 启动数据库中标记为自动启动的全部网络。
+    /// </summary>
+    /// <returns>异步启动任务，类型为 Task。</returns>
+    private async Task StartAutoStartNetworksAsync()
+    {
+        try
+        {
+            await _runtimeManager.StartAllAsync(_profileRepository.GetAll().Where(profile => profile.AutoStart));
+        }
+        catch (Exception exception)
+        {
+            ApplicationLogging.GetLogger(nameof(MainWindow)).Error(exception, "自动启动网络失败");
+        }
     }
 
     /// <summary>

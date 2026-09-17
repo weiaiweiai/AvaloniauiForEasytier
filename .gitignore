@@ -15,3 +15,6 @@ pelican-ride.html
 .idea/
 .vscode/
 .vscode/*.log
+
+# ZCode 会话文件
+.zcode/

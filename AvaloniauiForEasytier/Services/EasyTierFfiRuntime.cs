@@ -120,6 +120,7 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
 
             SetStatus(CoreProcessStatus.Running, "EasyTier FFI 实例已启动");
             PublishOutput(CoreOutputKind.System, $"已启动 EasyTier FFI 实例：{instanceName}");
+            Logger.Info("EasyTier FFI 实例已启动：{0}", instanceName);
             return true;
         }
         catch (OperationCanceledException)
@@ -163,6 +164,7 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
                 const string message = "未找到正在运行的 EasyTier 实例名称。";
                 SetStatus(CoreProcessStatus.Failed, message);
                 PublishOutput(CoreOutputKind.StandardError, message);
+                Logger.Error(message);
                 return;
             }
 
@@ -172,6 +174,7 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
                 var message = result.ErrorMessage;
                 SetStatus(CoreProcessStatus.Failed, message);
                 PublishOutput(CoreOutputKind.StandardError, message);
+                Logger.Error(message);
                 return;
             }
 
@@ -182,6 +185,7 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
 
             SetStatus(CoreProcessStatus.Stopped, "EasyTier FFI 实例已停止");
             PublishOutput(CoreOutputKind.System, $"已停止 EasyTier FFI 实例：{instanceName}");
+            Logger.Info("EasyTier FFI 实例已停止：{0}", instanceName);
         }
         catch (OperationCanceledException)
         {
@@ -193,7 +197,8 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
             // 停止过程异常属于关键故障，记录完整堆栈并同步失败状态。
             const string message = "EasyTier FFI 停止发生未预期异常。";
             SetStatus(CoreProcessStatus.Failed, message);
-            PublishOutput(CoreOutputKind.StandardError, $"{message} {exception.Message}", exception);
+            PublishOutput(CoreOutputKind.StandardError, $"{message} {exception.Message}");
+            Logger.Error(exception, message);
         }
         finally
         {
@@ -297,7 +302,15 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
     private bool FailStart(string message, Exception? exception = null)
     {
         SetStatus(CoreProcessStatus.Failed, message);
-        PublishOutput(CoreOutputKind.StandardError, message, exception);
+        PublishOutput(CoreOutputKind.StandardError, message);
+        if (exception is null)
+        {
+            Logger.Error("EasyTier FFI 启动失败：{0}", message);
+        }
+        else
+        {
+            Logger.Error(exception, "EasyTier FFI 启动失败：{0}", message);
+        }
         return false;
     }
 
@@ -334,26 +347,8 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
     /// </summary>
     /// <param name="kind">输出来源，类型为 CoreOutputKind，取值为 StandardOutput、StandardError 或 System，必填。</param>
     /// <param name="message">输出内容，类型为字符串，取值为非空文本，必填。</param>
-    /// <param name="exception">关联异常，类型为 Exception，可为空；提供时将把完整堆栈写入日志文件，非必填。</param>
-    private void PublishOutput(CoreOutputKind kind, string message, Exception? exception = null)
+    private void PublishOutput(CoreOutputKind kind, string message)
     {
-        // 运行时输出同时写入统一日志文件，确保界面日志与持久化日志来源一致。
-        if (kind == CoreOutputKind.StandardError)
-        {
-            if (exception is null)
-            {
-                Logger.Error("EasyTier FFI：{0}", message);
-            }
-            else
-            {
-                Logger.Error(exception, "EasyTier FFI：{0}", message);
-            }
-        }
-        else
-        {
-            Logger.Info("EasyTier FFI：{0}", message);
-        }
-
         OutputReceived?.Invoke(this, new CoreOutputEventArgs(kind, message));
     }
 
