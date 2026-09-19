@@ -13,7 +13,7 @@ using System.Linq;
 namespace AvaloniauiForEasytier.Views;
 
 /// <summary>
-/// 以网络为主体：网络列表与单个网络的详情（配置、节点、路由）。
+/// 以网络为主体：二级边栏选择网络，右侧详情页集中启停、配置以及节点和路由查看。
 /// </summary>
 public partial class NetworkView : UserControl
 {
@@ -21,12 +21,11 @@ public partial class NetworkView : UserControl
     private static readonly IBrush StatusTransitionBrush = new SolidColorBrush(Color.Parse("#D97706"));
     private static readonly IBrush StatusFailedBrush = new SolidColorBrush(Color.Parse("#F04438"));
     private static readonly IBrush StatusStoppedBrush = new SolidColorBrush(Color.Parse("#98A2B3"));
-    private static readonly IBrush AutoStartBrush = new SolidColorBrush(Color.Parse("#0F9F8F"));
 
     private readonly NetworkProfileRepository? _repository;
     private readonly ServerEndpointRepository? _serverRepository;
     private readonly NetworkRuntimeManager? _runtimeManager;
-    private List<NetworkProfile> _listProfiles = new();
+    private List<NetworkProfile> _sidebarProfiles = new();
     private NetworkProfile? _selectedProfile;
 
     /// <summary>初始化设计器使用的网络视图。</summary>
@@ -45,17 +44,16 @@ public partial class NetworkView : UserControl
         _runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));
         InitializeComponent();
         NewNetworkButton.Click += NewNetworkButton_Click;
-        BackButton.Click += BackButton_Click;
         StartNetworkButton.Click += StartNetworkButton_Click;
         DeleteNetworkButton.Click += DeleteNetworkButton_Click;
         SaveProfileButton.Click += SaveProfileButton_Click;
         PickServersButton.Click += PickServersButton_Click;
         _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
-        ShowList();
+        ClearSelection();
     }
 
     /// <summary>
-    /// 打开指定网络的详情页；配置不存在时回到列表。
+    /// 选中指定网络并展示详情；配置不存在时清除选择。
     /// </summary>
     /// <param name="profileId">网络主键，类型为 long，取值为大于零的数据库主键，必填。</param>
     public void OpenNetworkDetail(long profileId)
@@ -64,7 +62,7 @@ public partial class NetworkView : UserControl
         var profile = _repository.GetById(profileId);
         if (profile is null)
         {
-            ShowList();
+            ClearSelection();
             return;
         }
 
@@ -72,10 +70,11 @@ public partial class NetworkView : UserControl
         FillEditor(profile);
         UpdateDetailHeader();
         ShowDetail();
+        RenderSidebar();
     }
 
     /// <summary>
-    /// 响应任一网络状态变化并刷新当前可见模式。
+    /// 响应任一网络状态变化并刷新侧边栏状态和详情头部。
     /// </summary>
     /// <param name="instanceName">发生变化的实例名称，类型为字符串，取值为非空名称，必填。</param>
     /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
@@ -83,216 +82,166 @@ public partial class NetworkView : UserControl
     {
         Dispatcher.UIThread.Post(() =>
         {
-            // 详情模式只刷新头部状态，列表模式重建表格行。
+            // 侧边栏状态点始终刷新；选中网络匹配变化实例时同步详情头部。
+            RenderSidebar();
             if (DetailRoot.IsVisible) UpdateDetailHeader();
-            else RenderNetworkList();
         });
     }
 
-    /// <summary>切换到网络列表模式。</summary>
-    private void ShowList()
-    {
-        _selectedProfile = null;
-        DetailRoot.IsVisible = false;
-        ListRoot.IsVisible = true;
-        RenderNetworkList();
-    }
-
-    /// <summary>切换到网络详情模式并默认打开配置标签。</summary>
-    private void ShowDetail()
-    {
-        ListRoot.IsVisible = false;
-        DetailRoot.IsVisible = true;
-        DetailTabControl.SelectedIndex = 0;
-    }
-
-    /// <summary>重建网络表格并刷新列表汇总。</summary>
-    private void RenderNetworkList()
+    /// <summary>重建二级边栏网络列表。</summary>
+    private void RenderSidebar()
     {
         if (_repository is null || _runtimeManager is null) return;
-        _listProfiles = _repository.GetAll().ToList();
-        var runningCount = _runtimeManager.RunningCount;
+        _sidebarProfiles = _repository.GetAll().ToList();
+        var selectedId = _selectedProfile?.Id ?? 0;
 
-        // 汇总行显示运行数量，没有已保存网络时提示引导。
-        if (_listProfiles.Count == 0)
+        NetworkSidebarPanel.Children.Clear();
+
+        // 正在编辑未保存的新网络时，列表顶部显示一个不可点击的临时条目。
+        if (selectedId == 0 && _selectedProfile is not null)
         {
-            ListSummaryText.Text = "暂无网络";
-            ListSummaryIndicator.Fill = StatusStoppedBrush;
-        }
-        else
-        {
-            ListSummaryText.Text = runningCount > 0 ? $"运行中 {runningCount} / {_listProfiles.Count}" : "全部网络已停止";
-            ListSummaryIndicator.Fill = runningCount > 0 ? StatusRunningBrush : StatusStoppedBrush;
+            NetworkSidebarPanel.Children.Add(BuildUnsavedSidebarItem(_selectedProfile.ProfileName));
         }
 
-        NetworkRowsPanel.Children.Clear();
-        if (_listProfiles.Count == 0)
+        // 没有已保存网络且不在编辑新网络时显示引导文本。
+        if (_sidebarProfiles.Count == 0)
         {
-            var hint = new TextBlock
+            if (_selectedProfile is null)
             {
-                Classes = { "muted" },
-                Text = "暂无网络，点击右上角“新建网络”创建",
-                FontSize = 12,
-                Margin = new Thickness(0, 12)
-            };
-            NetworkRowsPanel.Children.Add(hint);
+                var hint = new TextBlock
+                {
+                    Classes = { "muted" },
+                    Text = "暂无网络，点击上方“新建网络”创建",
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(2, 8)
+                };
+                NetworkSidebarPanel.Children.Add(hint);
+            }
             return;
         }
 
-        for (var index = 0; index < _listProfiles.Count; index++)
+        foreach (var profile in _sidebarProfiles)
         {
-            var profile = _listProfiles[index];
-            NetworkRowsPanel.Children.Add(CreateNetworkRow(profile, _runtimeManager.GetStatus(profile.InstanceName), index == _listProfiles.Count - 1));
+            var status = _runtimeManager.GetStatus(profile.InstanceName);
+            var button = new Button
+            {
+                Content = BuildSidebarItemContent(profile, status),
+                Tag = profile.Id,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            button.Classes.Add("profile-item");
+
+            // 只有主键匹配选中网络的条目显示选中状态。
+            if (profile.Id == selectedId)
+            {
+                button.Classes.Add("selected");
+            }
+
+            button.Click += SidebarItemButton_Click;
+            NetworkSidebarPanel.Children.Add(button);
         }
     }
 
     /// <summary>
-    /// 创建一行网络状态表格。
+    /// 构造侧边栏网络条目的显示内容。
     /// </summary>
     /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
     /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
-    /// <param name="isLastRow">是否为最后一行，类型为 bool；为真时不绘制底部分隔线。</param>
-    /// <returns>表格行控件，类型为 Border。</returns>
-    private Border CreateNetworkRow(NetworkProfile profile, CoreProcessStatus status, bool isLastRow)
+    /// <returns>条目内容控件，类型为 Control。</returns>
+    private static Control BuildSidebarItemContent(NetworkProfile profile, CoreProcessStatus status)
     {
-        var row = new Border
+        var content = new StackPanel { Spacing = 3 };
+        content.Children.Add(new TextBlock
         {
-            MinHeight = 44,
-            BorderBrush = new SolidColorBrush(Color.Parse("#EEF1F5")),
-            BorderThickness = isLastRow ? new Thickness(0) : new Thickness(0, 0, 0, 1)
-        };
-
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.4, GridUnitType.Star)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(96, GridUnitType.Pixel)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(120, GridUnitType.Pixel)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(150, GridUnitType.Pixel)));
-
-        var nameText = new TextBlock
-        {
-            Classes = { "cell" },
             Text = profile.ProfileName,
-            FontWeight = FontWeight.Medium
-        };
-        grid.Children.Add(nameText);
-
-        // 未填写虚拟网段时显示占位说明，表示由 EasyTier 自动分配地址。
-        var subnetConfigured = !string.IsNullOrWhiteSpace(profile.Ipv4);
-        var subnetText = new TextBlock
-        {
-            Text = subnetConfigured ? profile.Ipv4!.Trim() : "自动分配",
             FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.Parse("#344054")),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+
+        // 副行显示状态圆点和网段摘要，体现每个网络的独立运行状态。
+        var subnet = string.IsNullOrWhiteSpace(profile.Ipv4) ? null : profile.Ipv4.Trim();
+        var detailPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        detailPanel.Children.Add(new Ellipse
+        {
+            Width = 7,
+            Height = 7,
+            VerticalAlignment = VerticalAlignment.Center,
+            Fill = GetStatusBrush(status)
+        });
+        detailPanel.Children.Add(new TextBlock
+        {
+            Text = subnet is null ? GetStatusText(status) : $"{GetStatusText(status)} · {subnet}",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(Color.Parse("#667085")),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        subnetText.Classes.Add(subnetConfigured ? "cell" : "cell-muted");
-        Grid.SetColumn(subnetText, 1);
-        grid.Children.Add(subnetText);
-
-        var autoStartText = new TextBlock
-        {
-            Text = profile.AutoStart ? "是" : "否",
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = profile.AutoStart ? AutoStartBrush : StatusStoppedBrush
-        };
-        Grid.SetColumn(autoStartText, 2);
-        grid.Children.Add(autoStartText);
-
-        var statusBrush = GetStatusBrush(status);
-        var statusPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 7,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        statusPanel.Children.Add(new Ellipse
-        {
-            Width = 8,
-            Height = 8,
-            VerticalAlignment = VerticalAlignment.Center,
-            Fill = statusBrush
         });
-        statusPanel.Children.Add(new TextBlock
-        {
-            Text = GetStatusText(status),
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = statusBrush
-        });
-        Grid.SetColumn(statusPanel, 3);
-        grid.Children.Add(statusPanel);
-
-        // 操作列提供启停和进入详情两个按钮；状态切换期间禁用启停。
-        var isStopAction = status is CoreProcessStatus.Running or CoreProcessStatus.Stopping;
-        var toggleButton = new Button
-        {
-            Content = isStopAction ? "停止" : "启动",
-            IsEnabled = status is CoreProcessStatus.Running or CoreProcessStatus.Stopped or CoreProcessStatus.Failed,
-            Tag = profile.Id,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        toggleButton.Classes.Add("row-action");
-        toggleButton.Classes.Add(isStopAction ? "outline" : "accent");
-        toggleButton.Click += NetworkRowToggleButton_Click;
-
-        var openButton = new Button
-        {
-            Content = "进入",
-            Tag = profile.Id,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        openButton.Classes.Add("row-action");
-        openButton.Classes.Add("outline");
-        openButton.Click += NetworkRowOpenButton_Click;
-
-        var actionPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 6,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        actionPanel.Children.Add(toggleButton);
-        actionPanel.Children.Add(openButton);
-        Grid.SetColumn(actionPanel, 4);
-        grid.Children.Add(actionPanel);
-
-        row.Child = grid;
-        return row;
+        content.Children.Add(detailPanel);
+        return content;
     }
 
     /// <summary>
-    /// 启动或停止表格行对应的一个网络。
+    /// 构造未保存新网络的临时条目。
     /// </summary>
-    /// <param name="sender">触发事件的启停按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private async void NetworkRowToggleButton_Click(object? sender, RoutedEventArgs e)
+    /// <param name="profileName">网络显示名称，类型为字符串，取值为任意文本，必填。</param>
+    /// <returns>临时条目控件，类型为 Border。</returns>
+    private static Border BuildUnsavedSidebarItem(string profileName)
     {
-        if (sender is not Button { Tag: long profileId } || _runtimeManager is null) return;
-        var profile = _listProfiles.FirstOrDefault(item => item.Id == profileId);
-        if (profile is null) return;
-
-        var status = _runtimeManager.GetStatus(profile.InstanceName);
-        // 运行中或状态切换中的网络执行停止，其余状态执行启动。
-        if (status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
+        var content = new StackPanel { Spacing = 3 };
+        content.Children.Add(new TextBlock
         {
-            await _runtimeManager.StopAsync(profile.InstanceName);
-        }
-        else
+            Text = profileName,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.Parse("#98A2B3")),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(new TextBlock
         {
-            await _runtimeManager.StartAsync(profile);
-        }
+            Text = "未保存",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(Color.Parse("#98A2B3"))
+        });
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#F7F8FA")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#D9DEE6")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new Avalonia.CornerRadius(5),
+            Padding = new Thickness(9, 8),
+            Margin = new Thickness(0, 0, 0, 5),
+            Child = content
+        };
     }
 
     /// <summary>
-    /// 进入表格行对应网络的详情页。
+    /// 响应侧边栏网络条目点击并选中该网络。
     /// </summary>
-    /// <param name="sender">触发事件的进入按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的条目按钮，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void NetworkRowOpenButton_Click(object? sender, RoutedEventArgs e)
+    private void SidebarItemButton_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: long profileId }) OpenNetworkDetail(profileId);
+    }
+
+    /// <summary>清除选择并显示空状态。</summary>
+    private void ClearSelection()
+    {
+        _selectedProfile = null;
+        DetailRoot.IsVisible = false;
+        DetailEmptyRoot.IsVisible = true;
+        RenderSidebar();
+    }
+
+    /// <summary>显示选中网络的详情并默认打开配置标签。</summary>
+    private void ShowDetail()
+    {
+        DetailEmptyRoot.IsVisible = false;
+        DetailRoot.IsVisible = true;
+        DetailTabControl.SelectedIndex = 0;
     }
 
     /// <summary>
@@ -306,14 +255,8 @@ public partial class NetworkView : UserControl
         FillEditor(_selectedProfile);
         UpdateDetailHeader();
         ShowDetail();
+        RenderSidebar();
     }
-
-    /// <summary>
-    /// 返回网络列表；未保存的编辑内容将被放弃。
-    /// </summary>
-    /// <param name="sender">触发事件的返回按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void BackButton_Click(object? sender, RoutedEventArgs e) => ShowList();
 
     /// <summary>
     /// 启动或停止详情页当前网络。
@@ -345,10 +288,10 @@ public partial class NetworkView : UserControl
     {
         if (_repository is null || _selectedProfile is null) return;
 
-        // 未保存的新网络没有数据库记录，直接返回列表。
+        // 未保存的新网络没有数据库记录，直接清除选择。
         if (_selectedProfile.Id == 0)
         {
-            ShowList();
+            ClearSelection();
             return;
         }
 
@@ -359,7 +302,7 @@ public partial class NetworkView : UserControl
         }
 
         _repository.Delete(_selectedProfile.Id);
-        ShowList();
+        ClearSelection();
     }
 
     /// <summary>
@@ -392,6 +335,7 @@ public partial class NetworkView : UserControl
         _repository.Save(profile);
         _selectedProfile = profile;
         UpdateDetailHeader();
+        RenderSidebar();
         ProfileStatusText.Text = "网络已保存";
     }
 
