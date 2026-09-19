@@ -126,7 +126,7 @@ public partial class NetworkView : UserControl
             var status = _runtimeManager.GetStatus(profile.InstanceName);
             var button = new Button
             {
-                Content = BuildSidebarItemContent(profile, status),
+                Content = BuildSidebarItemContent(profile, status, CreateQuickToggleButton(profile.Id, status)),
                 Tag = profile.Id,
                 Margin = new Thickness(0, 0, 0, 5)
             };
@@ -144,13 +144,73 @@ public partial class NetworkView : UserControl
     }
 
     /// <summary>
+    /// 创建条目右侧的快捷启停图标按钮。
+    /// </summary>
+    /// <param name="profileId">网络主键，类型为 long，取值为大于零的数据库主键，必填。</param>
+    /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
+    /// <returns>快捷启停按钮，类型为 Button。</returns>
+    private Button CreateQuickToggleButton(long profileId, CoreProcessStatus status)
+    {
+        // 运行或切换中的网络显示停止图标，其余显示启动图标；切换期间禁用。
+        var isStopAction = status is CoreProcessStatus.Running or CoreProcessStatus.Stopping;
+        var quickButton = new Button
+        {
+            Classes = { "quick-toggle" },
+            Tag = profileId,
+            IsEnabled = status is CoreProcessStatus.Running or CoreProcessStatus.Stopped or CoreProcessStatus.Failed,
+            VerticalAlignment = VerticalAlignment.Center,
+            Content = new PathIcon
+            {
+                Width = 12,
+                Height = 12,
+                Foreground = new SolidColorBrush(Color.Parse(isStopAction ? "#98A2B3" : "#0F9F8F")),
+                Data = Geometry.Parse(isStopAction ? "M6,6H18V18H6V6Z" : "M8,5V19L19,12L8,5Z")
+            }
+        };
+        ToolTip.SetTip(quickButton, isStopAction ? "停止网络" : "启动网络");
+        quickButton.Click += SidebarQuickToggleButton_Click;
+        return quickButton;
+    }
+
+    /// <summary>
+    /// 响应条目快捷启停按钮，启动或停止对应网络。
+    /// </summary>
+    /// <param name="sender">触发事件的快捷按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private async void SidebarQuickToggleButton_Click(object? sender, RoutedEventArgs e)
+    {
+        // 阻止事件冒泡到条目按钮，避免快捷启停时切换正在编辑的网络。
+        e.Handled = true;
+        if (_runtimeManager is null || sender is not Button { Tag: long profileId }) return;
+        var profile = _sidebarProfiles.FirstOrDefault(item => item.Id == profileId);
+        if (profile is null) return;
+
+        var status = _runtimeManager.GetStatus(profile.InstanceName);
+
+        // 运行中或状态切换中的网络执行停止，其余状态执行启动。
+        if (status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
+        {
+            await _runtimeManager.StopAsync(profile.InstanceName);
+        }
+        else
+        {
+            await _runtimeManager.StartAsync(profile);
+        }
+    }
+
+    /// <summary>
     /// 构造侧边栏网络条目的显示内容。
     /// </summary>
     /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
     /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
+    /// <param name="quickToggleButton">条目右侧的快捷启停按钮，类型为 Control，不可为空，必填。</param>
     /// <returns>条目内容控件，类型为 Control。</returns>
-    private static Control BuildSidebarItemContent(NetworkProfile profile, CoreProcessStatus status)
+    private static Control BuildSidebarItemContent(NetworkProfile profile, CoreProcessStatus status, Control quickToggleButton)
     {
+        var root = new Grid();
+        root.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+        root.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(30, GridUnitType.Pixel)));
+
         var content = new StackPanel { Spacing = 3 };
         content.Children.Add(new TextBlock
         {
@@ -180,7 +240,11 @@ public partial class NetworkView : UserControl
             TextTrimming = TextTrimming.CharacterEllipsis
         });
         content.Children.Add(detailPanel);
-        return content;
+
+        root.Children.Add(content);
+        Grid.SetColumn(quickToggleButton, 1);
+        root.Children.Add(quickToggleButton);
+        return root;
     }
 
     /// <summary>
