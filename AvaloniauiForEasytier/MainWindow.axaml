@@ -52,7 +52,7 @@
             <Setter Property="CornerRadius" Value="5" />
             <Setter Property="FontSize" Value="13" />
         </Style>
-        <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+        <Style Selector="Button.nav:pointerover">
             <Setter Property="Background" Value="{StaticResource NavigationHoverBrush}" />
         </Style>
         <Style Selector="Button.nav.selected">
