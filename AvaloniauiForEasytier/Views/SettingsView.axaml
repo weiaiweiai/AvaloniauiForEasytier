@@ -47,7 +47,7 @@
     <Grid Margin="18,14" RowDefinitions="38,16,*">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Classes="page-title" Text="应用设置" />
+                <TextBlock Classes="page-title" Text="设置" />
                 <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="调整控制台、核心服务与诊断行为" />
             </StackPanel>
             <Button Grid.Column="1" Classes="toolbar accent" Content="保存设置" />

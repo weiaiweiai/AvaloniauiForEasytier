@@ -19,6 +19,23 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="#475467" />
         </Style>
+        <Style Selector="TextBlock.column-header">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#667085" />
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#344054" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.cell-muted">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#98A2B3" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
         <Style Selector="Border.panel">
             <Setter Property="Background" Value="#FFFFFF" />
             <Setter Property="BorderBrush" Value="#D9DEE6" />
@@ -42,119 +59,168 @@
             <Setter Property="BorderBrush" Value="#C7CED8" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
-        <Style Selector="Button.profile-item">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="Padding" Value="9,7" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Style Selector="Button.row-action">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="MinWidth" Value="52" />
+            <Setter Property="Padding" Value="9,3" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontSize" Value="11" />
         </Style>
-        <Style Selector="Button.profile-item.selected">
-            <Setter Property="Background" Value="#E7F5F2" />
-            <Setter Property="BorderBrush" Value="#0F9F8F" />
+        <Style Selector="TabControl TabItem">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="14,7" />
         </Style>
     </UserControl.Styles>
 
-    <Grid Margin="18,14" RowDefinitions="38,16,*">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Classes="page-title" Text="网络配置" />
-                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="每个网络独立配置参数并单独启停" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7">
-                <Button Classes="toolbar outline" Content="导入" />
-                <Button Classes="toolbar outline" Content="导出" />
-                <Button x:Name="SaveProfileButton" Classes="toolbar accent" Content="保存网络" />
-            </StackPanel>
-        </Grid>
+    <Grid>
+        <!-- 网络列表模式 -->
+        <Grid x:Name="ListRoot" Margin="18,14" RowDefinitions="38,16,*">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="page-title" Text="网络" />
+                    <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="以网络为单位运行和配置" />
+                </StackPanel>
+                <Button x:Name="NewNetworkButton" Grid.Column="1" Classes="toolbar accent" Content="新建网络" />
+            </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="224,12,*">
-            <Border Grid.Column="0" Classes="panel">
-                <Grid RowDefinitions="42,*">
-                    <Border Grid.Row="0" Padding="13,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
+            <Border Grid.Row="2" Classes="panel">
+                <Grid RowDefinitions="40,Auto,*">
+                    <Border Grid.Row="0" Padding="13,0" Background="#F7F8FA" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Classes="section-title" VerticalAlignment="Center" Text="网络列表" />
-                            <Button x:Name="NewProfileButton" Grid.Column="1" Width="26" Height="26" Padding="4" Background="Transparent" ToolTip.Tip="新建网络">
-                                <PathIcon Width="15" Height="15" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
-                            </Button>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                                <Ellipse x:Name="ListSummaryIndicator" Width="8" Height="8" Fill="#98A2B3" />
+                                <TextBlock x:Name="ListSummaryText" Classes="muted" FontSize="11" Text="全部网络已停止" />
+                            </StackPanel>
                         </Grid>
                     </Border>
-                    <StackPanel x:Name="ProfileListPanel" Grid.Row="1" Margin="10,3">
-                    </StackPanel>
+                    <Border Grid.Row="1" Margin="13,6,13,0" Padding="0,0,0,7" BorderBrush="#EEF1F5" BorderThickness="0,0,0,1">
+                        <Grid ColumnDefinitions="1.4*,1*,96,120,150">
+                            <TextBlock Classes="column-header" VerticalAlignment="Center" Text="网络名称" />
+                            <TextBlock Grid.Column="1" Classes="column-header" VerticalAlignment="Center" Text="虚拟网段" />
+                            <TextBlock Grid.Column="2" Classes="column-header" VerticalAlignment="Center" Text="自动启动" />
+                            <TextBlock Grid.Column="3" Classes="column-header" VerticalAlignment="Center" Text="状态" />
+                            <TextBlock Grid.Column="4" Classes="column-header" VerticalAlignment="Center" Text="操作" />
+                        </Grid>
+                    </Border>
+                    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="NetworkRowsPanel" Margin="13,0,13,0" />
+                    </ScrollViewer>
                 </Grid>
             </Border>
+        </Grid>
 
-            <Border Grid.Column="2" Classes="panel">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                    <Grid Margin="20,16,20,20" RowDefinitions="Auto,18,Auto,18,Auto,18,Auto">
-                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="4">
-                                <TextBlock x:Name="EditorTitleText" Classes="section-title" FontSize="15" Text="未选择网络" />
-                                <TextBlock Classes="muted" FontSize="11" Text="以下参数仅作用于当前选中的网络。" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                                <Border Padding="8,4" Background="#FFF7E6" CornerRadius="4">
-                                    <TextBlock x:Name="ProfileStatusText" FontSize="10" Foreground="#9A5B08" Text="未选择网络" />
-                                </Border>
-                                <Button x:Name="StartProfileButton" Classes="toolbar accent" Content="启动网络" />
-                                <Button x:Name="StopProfileButton" Classes="toolbar outline" Content="停止网络" />
-                                <Button x:Name="DeleteProfileButton" Classes="toolbar outline" Content="删除" />
-                            </StackPanel>
-                        </Grid>
-
-                        <Border Grid.Row="2" Classes="panel" Background="#FBFCFD" Padding="15">
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
-                                <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="基础信息" />
-                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="网络名称" />
-                                <TextBox x:Name="ProfileNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="例如：办公室网络" />
-                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="实例名称" />
-                                <TextBox x:Name="InstanceNameTextBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="EasyTier FFI 唯一实例名" />
-                                <TextBlock Grid.Row="3" Classes="field-label" VerticalAlignment="Center" Text="虚拟网络名称" />
-                                <TextBox x:Name="NetworkNameTextBox" Grid.Row="3" Grid.Column="1" Height="30" PlaceholderText="填写网络标识" />
-                                <TextBlock Grid.Row="3" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="虚拟网段" />
-                                <TextBox x:Name="Ipv4TextBox" Grid.Row="3" Grid.Column="3" Height="30" PlaceholderText="例如：10.126.0.1/24" />
-                                <TextBlock Grid.Row="4" Classes="field-label" VerticalAlignment="Center" Text="本机节点名称" />
-                                <TextBox x:Name="HostnameTextBox" Grid.Row="4" Grid.Column="1" Height="30" PlaceholderText="可选" />
-                                <TextBlock Grid.Row="4" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="启动时自动连接" />
-                                <ToggleSwitch x:Name="AutoStartToggle" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
-                            </Grid>
+        <!-- 网络详情模式 -->
+        <Grid x:Name="DetailRoot" Margin="18,14" RowDefinitions="Auto,12,*" IsVisible="False">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,12,*,Auto">
+                <Button x:Name="BackButton" Classes="toolbar outline" VerticalAlignment="Center" Content="‹ 返回列表" />
+                <StackPanel Grid.Column="2" Spacing="3" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock x:Name="DetailTitleText" Classes="page-title" Text="未选择网络" />
+                        <Border Padding="8,4" Background="#FFF7E6" CornerRadius="4" VerticalAlignment="Bottom" Margin="0,0,0,3">
+                            <TextBlock x:Name="DetailStatusText" FontSize="10" Foreground="#9A5B08" Text="已停止" />
                         </Border>
+                    </StackPanel>
+                    <TextBlock x:Name="DetailInstanceText" Classes="muted" FontSize="11" Text="实例：--" />
+                </StackPanel>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                    <Button x:Name="StartNetworkButton" Classes="toolbar accent" Content="启动网络" />
+                    <Button x:Name="DeleteNetworkButton" Classes="toolbar outline" Content="删除" />
+                </StackPanel>
+            </Grid>
 
-                        <Border Grid.Row="4" Classes="panel" Background="#FBFCFD" Padding="15">
-                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
-                                <Grid Grid.ColumnSpan="4" ColumnDefinitions="*,Auto">
-                                    <TextBlock Classes="section-title" Text="连接参数" />
-                                    <TextBlock Grid.Column="1" Classes="muted" FontSize="10" Text="可在 EasyTier 文档中获取参数说明" />
+            <TabControl Grid.Row="2" x:Name="DetailTabControl" Background="Transparent" BorderThickness="0">
+                <TabItem Header="配置">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                        <Grid Margin="0,14,0,0" RowDefinitions="Auto,14,Auto,14,Auto,14,Auto">
+                            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="section-title" FontSize="15" Text="网络参数" />
+                                    <TextBlock Classes="muted" FontSize="11" Text="以下参数仅作用于当前网络。" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <Border Padding="8,4" Background="#FFF7E6" CornerRadius="4">
+                                        <TextBlock x:Name="ProfileStatusText" FontSize="10" Foreground="#9A5B08" Text="未选择网络" />
+                                    </Border>
+                                    <Button x:Name="SaveProfileButton" Classes="toolbar accent" Content="保存网络" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Grid.Row="2" Classes="panel" Background="#FBFCFD" Padding="15">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
+                                    <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="基础信息" />
+                                    <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="网络名称" />
+                                    <TextBox x:Name="ProfileNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="例如：办公室网络" />
+                                    <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="实例名称" />
+                                    <TextBox x:Name="InstanceNameTextBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="EasyTier FFI 唯一实例名" />
+                                    <TextBlock Grid.Row="3" Classes="field-label" VerticalAlignment="Center" Text="虚拟网络名称" />
+                                    <TextBox x:Name="NetworkNameTextBox" Grid.Row="3" Grid.Column="1" Height="30" PlaceholderText="填写网络标识" />
+                                    <TextBlock Grid.Row="3" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="虚拟网段" />
+                                    <TextBox x:Name="Ipv4TextBox" Grid.Row="3" Grid.Column="3" Height="30" PlaceholderText="例如：10.126.0.1/24" />
+                                    <TextBlock Grid.Row="4" Classes="field-label" VerticalAlignment="Center" Text="本机节点名称" />
+                                    <TextBox x:Name="HostnameTextBox" Grid.Row="4" Grid.Column="1" Height="30" PlaceholderText="可选" />
+                                    <TextBlock Grid.Row="4" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="启动时自动连接" />
+                                    <ToggleSwitch x:Name="AutoStartToggle" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
                                 </Grid>
-                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="入口节点地址" />
-                                <TextBox x:Name="PeerTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="52" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="每行一个入口节点，例如：tcp://example.com:11010" />
-                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="认证密钥" />
-                                <TextBox x:Name="NetworkSecretTextBox" Grid.Row="2" Grid.Column="1" Height="30" PasswordChar="*" PlaceholderText="可选" />
-                                <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="连接模式" />
-                                <ComboBox Grid.Row="2" Grid.Column="3" Height="30" SelectedIndex="0">
-                                    <ComboBoxItem Content="点对点" />
-                                    <ComboBoxItem Content="通过公共入口" />
-                                    <ComboBoxItem Content="仅本地" />
-                                </ComboBox>
-                            </Grid>
-                        </Border>
+                            </Border>
 
-                        <Border Grid.Row="6" Classes="panel" Background="#FBFCFD" Padding="15">
-                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
-                                <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="高级选项" />
-                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="启用 IPv6" />
-                                <ToggleSwitch Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
-                                <TextBlock Grid.Row="1" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="允许局域网转发" />
-                                <ToggleSwitch Grid.Row="1" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
-                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="自定义启动参数" />
-                                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="可选，多个参数以空格分隔" />
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
-            </Border>
+                            <Border Grid.Row="4" Classes="panel" Background="#FBFCFD" Padding="15">
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
+                                    <Grid Grid.ColumnSpan="4" ColumnDefinitions="*,Auto,Auto">
+                                        <TextBlock Classes="section-title" Text="连接参数" />
+                                        <Button x:Name="PickServersButton" Grid.Column="1" Classes="toolbar outline" Margin="0,0,8,0" Content="从服务器列表选择" />
+                                        <TextBlock Grid.Column="2" Classes="muted" VerticalAlignment="Center" FontSize="10" Text="可在 EasyTier 文档中获取参数说明" />
+                                    </Grid>
+                                    <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="入口节点地址" />
+                                    <TextBox x:Name="PeerTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="52" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="每行一个入口节点，例如：tcp://example.com:11010" />
+                                    <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="认证密钥" />
+                                    <TextBox x:Name="NetworkSecretTextBox" Grid.Row="2" Grid.Column="1" Height="30" PasswordChar="*" PlaceholderText="可选" />
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="连接模式" />
+                                    <ComboBox Grid.Row="2" Grid.Column="3" Height="30" SelectedIndex="0">
+                                        <ComboBoxItem Content="点对点" />
+                                        <ComboBoxItem Content="通过公共入口" />
+                                        <ComboBoxItem Content="仅本地" />
+                                    </ComboBox>
+                                    <Popup x:Name="ServerPickerPopup" IsLightDismissEnabled="True" Placement="Bottom" PlacementTarget="{Binding #PickServersButton}">
+                                        <Border Background="White" BorderBrush="#D9DEE6" BorderThickness="1" CornerRadius="6" Padding="12" MinWidth="300" MaxWidth="420" BoxShadow="0 8 24 #2417212F">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Classes="muted" FontSize="11" Text="勾选要加入的入口节点地址" />
+                                                <StackPanel x:Name="ServerPickerPanel" Spacing="6" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="6" Classes="panel" Background="#FBFCFD" Padding="15">
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
+                                    <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="高级选项" />
+                                    <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="启用 IPv6" />
+                                    <ToggleSwitch Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="允许局域网转发" />
+                                    <ToggleSwitch Grid.Row="1" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
+                                    <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="自定义启动参数" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="可选，多个参数以空格分隔" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="节点">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock FontSize="13" Foreground="#667085" Text="该网络的节点列表将在接入 EasyTier 实时数据后显示。" />
+                        <TextBlock HorizontalAlignment="Center" FontSize="11" Foreground="#98A2B3" Text="当前为界面预留状态" />
+                    </StackPanel>
+                </TabItem>
+
+                <TabItem Header="路由">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock FontSize="13" Foreground="#667085" Text="该网络的路由信息将在接入 EasyTier 实时数据后显示。" />
+                        <TextBlock HorizontalAlignment="Center" FontSize="11" Foreground="#98A2B3" Text="当前为界面预留状态" />
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
         </Grid>
     </Grid>
 </UserControl>

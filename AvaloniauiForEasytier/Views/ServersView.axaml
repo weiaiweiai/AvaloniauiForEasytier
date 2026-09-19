@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AvaloniauiForEasytier.Views.ServersView">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.page-title">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#17212F" />
+        </Style>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#17212F" />
+        </Style>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="#667085" />
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#475467" />
+        </Style>
+        <Style Selector="TextBlock.column-header">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#667085" />
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#344054" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.cell-muted">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#98A2B3" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#D9DEE6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Button.toolbar">
+            <Setter Property="Height" Value="31" />
+            <Setter Property="Padding" Value="11,5" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="#0F9F8F" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.outline">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#344054" />
+            <Setter Property="BorderBrush" Value="#C7CED8" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Button.row-action">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="MinWidth" Value="52" />
+            <Setter Property="Padding" Value="9,3" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="18,14" RowDefinitions="38,16,*,14,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Classes="page-title" Text="服务器列表" />
+                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="管理可复用的入口节点地址" />
+            </StackPanel>
+            <Button x:Name="AddServerButton" Grid.Column="1" Classes="toolbar accent" Content="添加服务器" />
+        </Grid>
+
+        <Border Grid.Row="2" Classes="panel">
+            <Grid RowDefinitions="40,Auto,*">
+                <Border Grid.Row="0" Padding="13,0" Background="#F7F8FA" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="section-title" VerticalAlignment="Center" Text="服务器地址簿" />
+                        <TextBlock x:Name="ServersSummaryText" Grid.Column="1" Classes="muted" VerticalAlignment="Center" FontSize="11" Text="共 0 个" />
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1" Margin="13,6,13,0" Padding="0,0,0,7" BorderBrush="#EEF1F5" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="200,2*,150,130">
+                        <TextBlock Classes="column-header" VerticalAlignment="Center" Text="名称" />
+                        <TextBlock Grid.Column="1" Classes="column-header" VerticalAlignment="Center" Text="节点地址" />
+                        <TextBlock Grid.Column="2" Classes="column-header" VerticalAlignment="Center" Text="添加时间" />
+                        <TextBlock Grid.Column="3" Classes="column-header" VerticalAlignment="Center" Text="操作" />
+                    </Grid>
+                </Border>
+                <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="ServerRowsPanel" Margin="13,0,13,0" />
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Classes="panel" Background="#FBFCFD" Padding="15">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="90,*,90,2*,Auto,Auto" ColumnSpacing="12" RowSpacing="9">
+                <TextBlock Classes="field-label" VerticalAlignment="Center" Text="服务器名称" />
+                <TextBox x:Name="ServerNameTextBox" Grid.Column="1" Height="30" PlaceholderText="例如：公共服务器" />
+                <TextBlock Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="节点地址" />
+                <TextBox x:Name="ServerAddressTextBox" Grid.Column="3" Height="30" PlaceholderText="例如：tcp://public.easytier.cn:11010" />
+                <Button x:Name="SaveServerButton" Grid.Column="4" Classes="toolbar accent" Content="保存" />
+                <Button x:Name="CancelServerButton" Grid.Column="5" Classes="toolbar outline" Content="取消" />
+                <TextBlock x:Name="ServerEditorStatusText" Grid.Row="1" Grid.ColumnSpan="6" Classes="muted" FontSize="11" Text="选择上方条目编辑，或点击“添加服务器”新增" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

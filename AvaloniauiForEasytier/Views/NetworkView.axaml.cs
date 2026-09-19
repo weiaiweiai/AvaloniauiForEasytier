@@ -13,7 +13,7 @@ using System.Linq;
 namespace AvaloniauiForEasytier.Views;
 
 /// <summary>
-/// 管理多个 EasyTier 网络及其独立运行状态。
+/// 以网络为主体：网络列表与单个网络的详情（配置、节点、路由）。
 /// </summary>
 public partial class NetworkView : UserControl
 {
@@ -21,210 +21,365 @@ public partial class NetworkView : UserControl
     private static readonly IBrush StatusTransitionBrush = new SolidColorBrush(Color.Parse("#D97706"));
     private static readonly IBrush StatusFailedBrush = new SolidColorBrush(Color.Parse("#F04438"));
     private static readonly IBrush StatusStoppedBrush = new SolidColorBrush(Color.Parse("#98A2B3"));
+    private static readonly IBrush AutoStartBrush = new SolidColorBrush(Color.Parse("#0F9F8F"));
 
     private readonly NetworkProfileRepository? _repository;
+    private readonly ServerEndpointRepository? _serverRepository;
     private readonly NetworkRuntimeManager? _runtimeManager;
+    private List<NetworkProfile> _listProfiles = new();
     private NetworkProfile? _selectedProfile;
 
-    /// <summary>初始化设计器使用的网络配置视图。</summary>
+    /// <summary>初始化设计器使用的网络视图。</summary>
     public NetworkView() { InitializeComponent(); }
 
     /// <summary>
-    /// 初始化多网络配置视图。
+    /// 初始化以网络为主体的网络视图。
     /// </summary>
     /// <param name="repository">网络配置仓储，类型为 NetworkProfileRepository，不可为空，必填。</param>
+    /// <param name="serverRepository">服务器地址仓储，类型为 ServerEndpointRepository，不可为空，必填。</param>
     /// <param name="runtimeManager">多实例运行时管理器，类型为 NetworkRuntimeManager，不可为空，必填。</param>
-    public NetworkView(NetworkProfileRepository repository, NetworkRuntimeManager runtimeManager)
+    public NetworkView(NetworkProfileRepository repository, ServerEndpointRepository serverRepository, NetworkRuntimeManager runtimeManager)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _serverRepository = serverRepository ?? throw new ArgumentNullException(nameof(serverRepository));
         _runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));
         InitializeComponent();
-        NewProfileButton.Click += NewProfileButton_Click;
+        NewNetworkButton.Click += NewNetworkButton_Click;
+        BackButton.Click += BackButton_Click;
+        StartNetworkButton.Click += StartNetworkButton_Click;
+        DeleteNetworkButton.Click += DeleteNetworkButton_Click;
         SaveProfileButton.Click += SaveProfileButton_Click;
-        DeleteProfileButton.Click += DeleteProfileButton_Click;
-        StartProfileButton.Click += StartProfileButton_Click;
-        StopProfileButton.Click += StopProfileButton_Click;
+        PickServersButton.Click += PickServersButton_Click;
         _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
-        LoadProfiles(null);
+        ShowList();
     }
 
     /// <summary>
-    /// 响应运行时状态变化并刷新配置列表。
+    /// 打开指定网络的详情页；配置不存在时回到列表。
+    /// </summary>
+    /// <param name="profileId">网络主键，类型为 long，取值为大于零的数据库主键，必填。</param>
+    public void OpenNetworkDetail(long profileId)
+    {
+        if (_repository is null) return;
+        var profile = _repository.GetById(profileId);
+        if (profile is null)
+        {
+            ShowList();
+            return;
+        }
+
+        _selectedProfile = profile;
+        FillEditor(profile);
+        UpdateDetailHeader();
+        ShowDetail();
+    }
+
+    /// <summary>
+    /// 响应任一网络状态变化并刷新当前可见模式。
     /// </summary>
     /// <param name="instanceName">发生变化的实例名称，类型为字符串，取值为非空名称，必填。</param>
     /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
     private void RuntimeManager_StatusChanged(string instanceName, CoreStatusChangedEventArgs eventArgs)
     {
-        Dispatcher.UIThread.Post(() => { RefreshProfileListStatus(); UpdateEditorStatus(); });
+        Dispatcher.UIThread.Post(() =>
+        {
+            // 详情模式只刷新头部状态，列表模式重建表格行。
+            if (DetailRoot.IsVisible) UpdateDetailHeader();
+            else RenderNetworkList();
+        });
     }
 
-    /// <summary>
-    /// 只刷新左侧网络列表中的运行状态，不覆盖右侧未保存编辑内容。
-    /// </summary>
-    private void RefreshProfileListStatus()
+    /// <summary>切换到网络列表模式。</summary>
+    private void ShowList()
     {
-        if (_repository is null) return;
-        var profiles = _repository.GetAll();
-        foreach (var profile in profiles)
+        _selectedProfile = null;
+        DetailRoot.IsVisible = false;
+        ListRoot.IsVisible = true;
+        RenderNetworkList();
+    }
+
+    /// <summary>切换到网络详情模式并默认打开配置标签。</summary>
+    private void ShowDetail()
+    {
+        ListRoot.IsVisible = false;
+        DetailRoot.IsVisible = true;
+        DetailTabControl.SelectedIndex = 0;
+    }
+
+    /// <summary>重建网络表格并刷新列表汇总。</summary>
+    private void RenderNetworkList()
+    {
+        if (_repository is null || _runtimeManager is null) return;
+        _listProfiles = _repository.GetAll().ToList();
+        var runningCount = _runtimeManager.RunningCount;
+
+        // 汇总行显示运行数量，没有已保存网络时提示引导。
+        if (_listProfiles.Count == 0)
         {
-            if (ProfileListPanel.Children.FirstOrDefault(control => control is Button button && button.Tag is long id && id == profile.Id) is Button button)
-            {
-                // 只重建列表项内容，保留选中高亮样式类。
-                button.Content = BuildProfileItemContent(profile, _runtimeManager?.GetStatus(profile.InstanceName) ?? CoreProcessStatus.Stopped);
-            }
+            ListSummaryText.Text = "暂无网络";
+            ListSummaryIndicator.Fill = StatusStoppedBrush;
         }
-    }
-
-    /// <summary>
-    /// 读取数据库中的网络并重建左侧列表。
-    /// </summary>
-    /// <param name="selectedId">需要重新选中的网络主键，类型为 long 可空值，取值为已存在主键或空，非必填。</param>
-    private void LoadProfiles(long? selectedId)
-    {
-        if (_repository is null) return;
-        ProfileListPanel.Children.Clear();
-        var profiles = _repository.GetAll();
-        foreach (var profile in profiles)
+        else
         {
-            var button = new Button
+            ListSummaryText.Text = runningCount > 0 ? $"运行中 {runningCount} / {_listProfiles.Count}" : "全部网络已停止";
+            ListSummaryIndicator.Fill = runningCount > 0 ? StatusRunningBrush : StatusStoppedBrush;
+        }
+
+        NetworkRowsPanel.Children.Clear();
+        if (_listProfiles.Count == 0)
+        {
+            var hint = new TextBlock
             {
-                Content = BuildProfileItemContent(profile, _runtimeManager?.GetStatus(profile.InstanceName) ?? CoreProcessStatus.Stopped),
-                Tag = profile.Id,
-                Margin = new Thickness(0, 0, 0, 5)
+                Classes = { "muted" },
+                Text = "暂无网络，点击右上角“新建网络”创建",
+                FontSize = 12,
+                Margin = new Thickness(0, 12)
             };
-            button.Classes.Add("profile-item");
-            button.Click += ProfileButton_Click;
-            ProfileListPanel.Children.Add(button);
+            NetworkRowsPanel.Children.Add(hint);
+            return;
         }
-        var idToSelect = selectedId ?? profiles.FirstOrDefault()?.Id;
-        if (idToSelect.HasValue) SelectProfile(idToSelect.Value); else ClearEditor();
+
+        for (var index = 0; index < _listProfiles.Count; index++)
+        {
+            var profile = _listProfiles[index];
+            NetworkRowsPanel.Children.Add(CreateNetworkRow(profile, _runtimeManager.GetStatus(profile.InstanceName), index == _listProfiles.Count - 1));
+        }
     }
 
     /// <summary>
-    /// 构造网络列表中一个列表项的显示内容。
+    /// 创建一行网络状态表格。
     /// </summary>
     /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
     /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
-    /// <returns>列表项内容控件，类型为 Control。</returns>
-    private static Control BuildProfileItemContent(NetworkProfile profile, CoreProcessStatus status)
+    /// <param name="isLastRow">是否为最后一行，类型为 bool；为真时不绘制底部分隔线。</param>
+    /// <returns>表格行控件，类型为 Border。</returns>
+    private Border CreateNetworkRow(NetworkProfile profile, CoreProcessStatus status, bool isLastRow)
     {
-        var content = new StackPanel { Spacing = 3 };
-        content.Children.Add(new TextBlock
+        var row = new Border
         {
-            Text = profile.ProfileName,
-            FontSize = 12,
-            FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Color.Parse("#344054")),
-            TextTrimming = TextTrimming.CharacterEllipsis
-        });
+            MinHeight = 44,
+            BorderBrush = new SolidColorBrush(Color.Parse("#EEF1F5")),
+            BorderThickness = isLastRow ? new Thickness(0) : new Thickness(0, 0, 0, 1)
+        };
 
-        // 副行显示状态圆点和网段摘要，体现每个网络的独立运行状态。
-        var subnet = string.IsNullOrWhiteSpace(profile.Ipv4) ? null : profile.Ipv4.Trim();
-        var detailPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        detailPanel.Children.Add(new Ellipse
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.4, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(96, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(120, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(150, GridUnitType.Pixel)));
+
+        var nameText = new TextBlock
         {
-            Width = 7,
-            Height = 7,
-            VerticalAlignment = VerticalAlignment.Center,
-            Fill = GetStatusBrush(status)
-        });
-        detailPanel.Children.Add(new TextBlock
+            Classes = { "cell" },
+            Text = profile.ProfileName,
+            FontWeight = FontWeight.Medium
+        };
+        grid.Children.Add(nameText);
+
+        // 未填写虚拟网段时显示占位说明，表示由 EasyTier 自动分配地址。
+        var subnetConfigured = !string.IsNullOrWhiteSpace(profile.Ipv4);
+        var subnetText = new TextBlock
         {
-            Text = subnet is null ? GetStatusText(status) : $"{GetStatusText(status)} · {subnet}",
-            FontSize = 10,
-            Foreground = new SolidColorBrush(Color.Parse("#667085")),
+            Text = subnetConfigured ? profile.Ipv4!.Trim() : "自动分配",
+            FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        subnetText.Classes.Add(subnetConfigured ? "cell" : "cell-muted");
+        Grid.SetColumn(subnetText, 1);
+        grid.Children.Add(subnetText);
+
+        var autoStartText = new TextBlock
+        {
+            Text = profile.AutoStart ? "是" : "否",
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = profile.AutoStart ? AutoStartBrush : StatusStoppedBrush
+        };
+        Grid.SetColumn(autoStartText, 2);
+        grid.Children.Add(autoStartText);
+
+        var statusBrush = GetStatusBrush(status);
+        var statusPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 7,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        statusPanel.Children.Add(new Ellipse
+        {
+            Width = 8,
+            Height = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+            Fill = statusBrush
         });
-        content.Children.Add(detailPanel);
-        return content;
+        statusPanel.Children.Add(new TextBlock
+        {
+            Text = GetStatusText(status),
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = statusBrush
+        });
+        Grid.SetColumn(statusPanel, 3);
+        grid.Children.Add(statusPanel);
+
+        // 操作列提供启停和进入详情两个按钮；状态切换期间禁用启停。
+        var isStopAction = status is CoreProcessStatus.Running or CoreProcessStatus.Stopping;
+        var toggleButton = new Button
+        {
+            Content = isStopAction ? "停止" : "启动",
+            IsEnabled = status is CoreProcessStatus.Running or CoreProcessStatus.Stopped or CoreProcessStatus.Failed,
+            Tag = profile.Id,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        toggleButton.Classes.Add("row-action");
+        toggleButton.Classes.Add(isStopAction ? "outline" : "accent");
+        toggleButton.Click += NetworkRowToggleButton_Click;
+
+        var openButton = new Button
+        {
+            Content = "进入",
+            Tag = profile.Id,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        openButton.Classes.Add("row-action");
+        openButton.Classes.Add("outline");
+        openButton.Click += NetworkRowOpenButton_Click;
+
+        var actionPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        actionPanel.Children.Add(toggleButton);
+        actionPanel.Children.Add(openButton);
+        Grid.SetColumn(actionPanel, 4);
+        grid.Children.Add(actionPanel);
+
+        row.Child = grid;
+        return row;
     }
 
-    /// <summary>刷新左侧网络列表的选中高亮。</summary>
-    private void UpdateProfileListSelection()
+    /// <summary>
+    /// 启动或停止表格行对应的一个网络。
+    /// </summary>
+    /// <param name="sender">触发事件的启停按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private async void NetworkRowToggleButton_Click(object? sender, RoutedEventArgs e)
     {
-        var selectedId = _selectedProfile?.Id ?? 0;
-        foreach (var button in ProfileListPanel.Children.OfType<Button>())
-        {
-            var id = button.Tag as long? ?? 0;
+        if (sender is not Button { Tag: long profileId } || _runtimeManager is null) return;
+        var profile = _listProfiles.FirstOrDefault(item => item.Id == profileId);
+        if (profile is null) return;
 
-            // 只有主键匹配选中网络的列表项显示选中状态；未保存的新网络不高亮任何项。
-            if (id != 0 && id == selectedId)
-            {
-                button.Classes.Add("selected");
-            }
-            else
-            {
-                button.Classes.Remove("selected");
-            }
+        var status = _runtimeManager.GetStatus(profile.InstanceName);
+        // 运行中或状态切换中的网络执行停止，其余状态执行启动。
+        if (status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
+        {
+            await _runtimeManager.StopAsync(profile.InstanceName);
+        }
+        else
+        {
+            await _runtimeManager.StartAsync(profile);
         }
     }
 
     /// <summary>
-    /// 响应左侧配置选择。
+    /// 进入表格行对应网络的详情页。
     /// </summary>
-    /// <param name="sender">触发事件的配置按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的进入按钮，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void ProfileButton_Click(object? sender, RoutedEventArgs e)
+    private void NetworkRowOpenButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.Tag is long id) SelectProfile(id);
+        if (sender is Button { Tag: long profileId }) OpenNetworkDetail(profileId);
     }
 
     /// <summary>
-    /// 选择一个配置并回填编辑器。
+    /// 新建一个未保存的网络并进入详情编辑。
     /// </summary>
-    /// <param name="id">配置主键，类型为 long，取值为正数数据库主键，必填。</param>
-    private void SelectProfile(long id)
-    {
-        _selectedProfile = _repository?.GetById(id);
-        if (_selectedProfile is null) return;
-        InstanceNameTextBox.Text = _selectedProfile.InstanceName;
-        ProfileNameTextBox.Text = _selectedProfile.ProfileName;
-        NetworkNameTextBox.Text = _selectedProfile.NetworkName;
-        NetworkSecretTextBox.Text = _selectedProfile.NetworkSecret;
-        Ipv4TextBox.Text = _selectedProfile.Ipv4;
-        HostnameTextBox.Text = _selectedProfile.Hostname;
-        PeerTextBox.Text = _selectedProfile.PeerUris;
-        AutoStartToggle.IsChecked = _selectedProfile.AutoStart;
-        EditorTitleText.Text = $"网络：{_selectedProfile.ProfileName}";
-        UpdateProfileListSelection();
-        UpdateEditorStatus();
-    }
-
-    /// <summary>
-    /// 新建一个未保存网络配置。
-    /// </summary>
-    /// <param name="sender">触发事件的按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的新建按钮，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void NewProfileButton_Click(object? sender, RoutedEventArgs e)
+    private void NewNetworkButton_Click(object? sender, RoutedEventArgs e)
     {
         _selectedProfile = new NetworkProfile { ProfileName = "新网络", InstanceName = $"easytier-{DateTime.Now:HHmmss}", NetworkName = "easytier" };
-        InstanceNameTextBox.Text = _selectedProfile.InstanceName;
-        ProfileNameTextBox.Text = _selectedProfile.ProfileName;
-        NetworkNameTextBox.Text = _selectedProfile.NetworkName;
-        NetworkSecretTextBox.Text = Ipv4TextBox.Text = HostnameTextBox.Text = PeerTextBox.Text = string.Empty;
-        AutoStartToggle.IsChecked = false;
-        EditorTitleText.Text = $"网络：{_selectedProfile.ProfileName}（未保存）";
-        UpdateProfileListSelection();
-        UpdateEditorStatus();
+        FillEditor(_selectedProfile);
+        UpdateDetailHeader();
+        ShowDetail();
     }
 
     /// <summary>
-    /// 保存当前编辑器中的网络配置。
+    /// 返回网络列表；未保存的编辑内容将被放弃。
     /// </summary>
-    /// <param name="sender">触发事件的按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的返回按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private void BackButton_Click(object? sender, RoutedEventArgs e) => ShowList();
+
+    /// <summary>
+    /// 启动或停止详情页当前网络。
+    /// </summary>
+    /// <param name="sender">触发事件的启停按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private async void StartNetworkButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedProfile is null || _runtimeManager is null) return;
+        var status = _runtimeManager.GetStatus(_selectedProfile.InstanceName);
+
+        // 运行中或状态切换中的网络执行停止，其余状态执行启动。
+        if (status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
+        {
+            await _runtimeManager.StopAsync(_selectedProfile.InstanceName);
+        }
+        else
+        {
+            await _runtimeManager.StartAsync(_selectedProfile);
+        }
+    }
+
+    /// <summary>
+    /// 删除详情页当前网络；未保存的新网络视为放弃编辑。
+    /// </summary>
+    /// <param name="sender">触发事件的删除按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private void DeleteNetworkButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_repository is null || _selectedProfile is null) return;
+
+        // 未保存的新网络没有数据库记录，直接返回列表。
+        if (_selectedProfile.Id == 0)
+        {
+            ShowList();
+            return;
+        }
+
+        if (_runtimeManager?.GetStatus(_selectedProfile.InstanceName) is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
+        {
+            ProfileStatusText.Text = "请先停止运行中的网络";
+            return;
+        }
+
+        _repository.Delete(_selectedProfile.Id);
+        ShowList();
+    }
+
+    /// <summary>
+    /// 保存详情页编辑器中的网络参数。
+    /// </summary>
+    /// <param name="sender">触发事件的保存按钮，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
     private void SaveProfileButton_Click(object? sender, RoutedEventArgs e)
     {
         if (_repository is null || _selectedProfile is null) return;
         var profile = _selectedProfile;
         var originalInstanceName = profile.InstanceName;
-        // 运行中的实例配置不可直接改名或改参数，避免数据库配置与已启动实例脱节。
+
+        // 运行中的实例参数不可直接修改，避免数据库配置与已启动实例脱节。
         if (_runtimeManager?.GetStatus(originalInstanceName) is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
         {
             ProfileStatusText.Text = "请先停止网络再保存修改";
             return;
         }
+
         profile.ProfileName = string.IsNullOrWhiteSpace(ProfileNameTextBox.Text) ? "未命名网络" : ProfileNameTextBox.Text.Trim();
         profile.InstanceName = string.IsNullOrWhiteSpace(InstanceNameTextBox.Text) ? "easytier-desktop" : InstanceNameTextBox.Text.Trim();
         profile.NetworkName = string.IsNullOrWhiteSpace(NetworkNameTextBox.Text) ? "easytier" : NetworkNameTextBox.Text.Trim();
@@ -236,78 +391,151 @@ public partial class NetworkView : UserControl
         if (_repository.IsInstanceNameUsed(profile.InstanceName, profile.Id)) { ProfileStatusText.Text = "实例名称已被其他网络使用"; return; }
         _repository.Save(profile);
         _selectedProfile = profile;
-        LoadProfiles(profile.Id);
+        UpdateDetailHeader();
         ProfileStatusText.Text = "网络已保存";
     }
 
     /// <summary>
-    /// 删除当前网络配置；运行中的配置需要先停止。
+    /// 打开服务器地址勾选列表。
     /// </summary>
-    /// <param name="sender">触发事件的按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的选择按钮，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void DeleteProfileButton_Click(object? sender, RoutedEventArgs e)
+    private void PickServersButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (_repository is null || _selectedProfile is null || _selectedProfile.Id == 0) return;
-        if (_runtimeManager?.GetStatus(_selectedProfile.InstanceName) == CoreProcessStatus.Running) { ProfileStatusText.Text = "请先停止运行中的网络"; return; }
-        _repository.Delete(_selectedProfile.Id);
-        _selectedProfile = null;
-        LoadProfiles(null);
+        RebuildServerPicker();
+        ServerPickerPopup.IsOpen = true;
+    }
+
+    /// <summary>按数据库重建服务器地址勾选列表。</summary>
+    private void RebuildServerPicker()
+    {
+        if (_serverRepository is null) return;
+        ServerPickerPanel.Children.Clear();
+        var servers = _serverRepository.GetAll();
+        if (servers.Count == 0)
+        {
+            ServerPickerPanel.Children.Add(new TextBlock
+            {
+                Classes = { "muted" },
+                FontSize = 11,
+                Text = "服务器列表为空，请先在“服务器列表”页添加"
+            });
+            return;
+        }
+
+        var currentLines = ParsePeerLines();
+        foreach (var server in servers)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = new TextBlock
+                {
+                    Text = $"{server.Name}（{server.Address}）",
+                    FontSize = 12,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 360
+                },
+                Tag = server,
+                IsChecked = currentLines.Contains(server.Address.Trim(), StringComparer.Ordinal)
+            };
+            checkBox.Click += ServerPickerCheckBox_Click;
+            ServerPickerPanel.Children.Add(checkBox);
+        }
     }
 
     /// <summary>
-    /// 启动当前配置对应的网络实例。
+    /// 响应服务器地址勾选变化，同步入口节点地址文本。
     /// </summary>
-    /// <param name="sender">触发事件的按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的复选框，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private async void StartProfileButton_Click(object? sender, RoutedEventArgs e)
+    private void ServerPickerCheckBox_Click(object? sender, RoutedEventArgs e)
     {
-        if (_selectedProfile is not null && _runtimeManager is not null) await _runtimeManager.StartAsync(_selectedProfile);
+        if (sender is not CheckBox { Tag: ServerEndpoint server } checkBox) return;
+        var lines = ParsePeerLines();
+        var address = server.Address.Trim();
+
+        // 勾选时追加地址行，取消勾选时移除对应行。
+        var contains = lines.Contains(address, StringComparer.Ordinal);
+        if (checkBox.IsChecked == true && !contains)
+        {
+            lines.Add(address);
+        }
+        else if (checkBox.IsChecked != true && contains)
+        {
+            lines.RemoveAll(line => string.Equals(line, address, StringComparison.Ordinal));
+        }
+
+        PeerTextBox.Text = string.Join(Environment.NewLine, lines);
     }
 
     /// <summary>
-    /// 停止当前配置对应的网络实例。
+    /// 解析入口节点地址文本框中的地址行。
     /// </summary>
-    /// <param name="sender">触发事件的按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private async void StopProfileButton_Click(object? sender, RoutedEventArgs e)
+    /// <returns>去重后的地址行列表，类型为 List&lt;string&gt;。</returns>
+    private List<string> ParsePeerLines()
     {
-        if (_selectedProfile is not null && _runtimeManager is not null) await _runtimeManager.StopAsync(_selectedProfile.InstanceName);
-    }
-
-    /// <summary>更新编辑器中的实例运行状态和可用操作。</summary>
-    private void UpdateEditorStatus()
-    {
-        if (_selectedProfile is null || _runtimeManager is null) { ProfileStatusText.Text = "未选择网络"; return; }
-        var status = _runtimeManager.GetStatus(_selectedProfile.InstanceName);
-        ProfileStatusText.Text = GetStatusText(status);
-        StartProfileButton.IsEnabled = status is CoreProcessStatus.Stopped or CoreProcessStatus.Failed;
-        StopProfileButton.IsEnabled = status is CoreProcessStatus.Running or CoreProcessStatus.Starting;
-    }
-
-    /// <summary>清空编辑器中的字段。</summary>
-    private void ClearEditor()
-    {
-        _selectedProfile = null;
-        InstanceNameTextBox.Text = ProfileNameTextBox.Text = NetworkNameTextBox.Text = NetworkSecretTextBox.Text = Ipv4TextBox.Text = HostnameTextBox.Text = PeerTextBox.Text = string.Empty;
-        AutoStartToggle.IsChecked = false;
-        EditorTitleText.Text = "未选择网络";
-        UpdateProfileListSelection();
-        UpdateEditorStatus();
+        return (PeerTextBox.Text ?? string.Empty)
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
     }
 
     /// <summary>
-    /// 获取配置对应的可读状态文本。
+    /// 用网络参数回填编辑器控件。
     /// </summary>
-    /// <param name="instanceName">实例名称，类型为字符串，取值为非空名称，必填。</param>
-    /// <returns>状态文本，类型为字符串。</returns>
-    private string GetStatusText(string instanceName) => GetStatusText(_runtimeManager?.GetStatus(instanceName) ?? CoreProcessStatus.Stopped);
+    /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
+    private void FillEditor(NetworkProfile profile)
+    {
+        InstanceNameTextBox.Text = profile.InstanceName;
+        ProfileNameTextBox.Text = profile.ProfileName;
+        NetworkNameTextBox.Text = profile.NetworkName;
+        NetworkSecretTextBox.Text = profile.NetworkSecret;
+        Ipv4TextBox.Text = profile.Ipv4;
+        HostnameTextBox.Text = profile.Hostname;
+        PeerTextBox.Text = profile.PeerUris;
+        AutoStartToggle.IsChecked = profile.AutoStart;
+
+        // 提示当前编辑来源：已保存网络已加载数据库参数，新网络尚未保存。
+        ProfileStatusText.Text = profile.Id == 0 ? "新网络尚未保存" : "已加载数据库中的网络参数";
+    }
+
+    /// <summary>刷新详情页头部的标题、状态徽标和按钮状态。</summary>
+    private void UpdateDetailHeader()
+    {
+        if (_selectedProfile is null)
+        {
+            DetailTitleText.Text = "未选择网络";
+            DetailInstanceText.Text = "实例：--";
+            DetailStatusText.Text = "已停止";
+            return;
+        }
+
+        var profile = _selectedProfile;
+        DetailTitleText.Text = profile.Id == 0 ? $"{profile.ProfileName}（未保存）" : profile.ProfileName;
+        DetailInstanceText.Text = $"实例：{profile.InstanceName}";
+        var status = _runtimeManager?.GetStatus(profile.InstanceName) ?? CoreProcessStatus.Stopped;
+        DetailStatusText.Text = GetStatusText(status);
+
+        // 头部按钮随状态切换：运行或切换中显示停止并禁用删除，其余显示启动。
+        var isStopAction = status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping;
+        StartNetworkButton.Content = isStopAction ? "停止网络" : "启动网络";
+        DeleteNetworkButton.IsEnabled = !isStopAction;
+    }
 
     /// <summary>
-    /// 将运行状态转换为中文文本。
+    /// 获取运行状态的中文文本。
     /// </summary>
     /// <param name="status">运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
     /// <returns>状态文本，类型为字符串。</returns>
-    private static string GetStatusText(CoreProcessStatus status) => status switch { CoreProcessStatus.Running => "运行中", CoreProcessStatus.Starting => "启动中", CoreProcessStatus.Stopping => "停止中", CoreProcessStatus.Failed => "异常", _ => "已停止" };
+    private static string GetStatusText(CoreProcessStatus status) => status switch
+    {
+        CoreProcessStatus.Running => "运行中",
+        CoreProcessStatus.Starting => "启动中",
+        CoreProcessStatus.Stopping => "停止中",
+        CoreProcessStatus.Failed => "异常",
+        _ => "已停止"
+    };
 
     /// <summary>
     /// 获取运行状态对应的显示颜色。

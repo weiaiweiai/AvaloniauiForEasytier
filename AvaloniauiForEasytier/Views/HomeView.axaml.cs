@@ -13,7 +13,7 @@ using System.Linq;
 namespace AvaloniauiForEasytier.Views;
 
 /// <summary>
-/// 按网络罗列运行状态并提供单个网络与批量启停操作的主页。
+/// 显示网络运行总览、网络快照和最近活动的主页。
 /// </summary>
 public partial class HomeView : UserControl
 {
@@ -24,11 +24,11 @@ public partial class HomeView : UserControl
     private static readonly IBrush TransitionBrush = new SolidColorBrush(Color.Parse("#D97706"));
     private static readonly IBrush FailedBrush = new SolidColorBrush(Color.Parse("#F04438"));
     private static readonly IBrush StoppedBrush = new SolidColorBrush(Color.Parse("#98A2B3"));
-    private static readonly IBrush AutoStartBrush = new SolidColorBrush(Color.Parse("#0F9F8F"));
     private static readonly IBrush MessageBrush = new SolidColorBrush(Color.Parse("#475467"));
 
     private readonly NetworkProfileRepository? _repository;
     private readonly NetworkRuntimeManager? _runtimeManager;
+    private readonly Action<long>? _openNetworkDetail;
     private List<NetworkProfile> _profiles = new();
     private bool _isBatchOperating; // 标记批量启停操作是否正在执行，避免期间重复提交。
 
@@ -36,30 +36,32 @@ public partial class HomeView : UserControl
     public HomeView() { InitializeComponent(); }
 
     /// <summary>
-    /// 初始化按网络管理的主页。
+    /// 初始化网络总览主页。
     /// </summary>
     /// <param name="repository">网络配置仓储，类型为 NetworkProfileRepository，不可为空，必填。</param>
     /// <param name="runtimeManager">多实例运行时管理器，类型为 NetworkRuntimeManager，不可为空，必填。</param>
-    public HomeView(NetworkProfileRepository repository, NetworkRuntimeManager runtimeManager)
+    /// <param name="openNetworkDetail">打开网络详情的回调，类型为 Action&lt;long&gt;；参数为目标网络主键，可空，非必填。</param>
+    public HomeView(NetworkProfileRepository repository, NetworkRuntimeManager runtimeManager, Action<long>? openNetworkDetail = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));
+        _openNetworkDetail = openNetworkDetail;
         InitializeComponent();
         StartAllButton.Click += StartAllButton_Click;
         StopAllButton.Click += StopAllButton_Click;
         _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
         _runtimeManager.OutputReceived += RuntimeManager_OutputReceived;
-        RenderNetworks();
+        RenderOverview();
     }
 
     /// <summary>
-    /// 响应任一网络状态变化并重建网络表格。
+    /// 响应任一网络状态变化并刷新总览。
     /// </summary>
     /// <param name="instanceName">发生变化的实例名称，类型为字符串，取值为非空名称，必填。</param>
     /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
     private void RuntimeManager_StatusChanged(string instanceName, CoreStatusChangedEventArgs eventArgs)
     {
-        Dispatcher.UIThread.Post(RenderNetworks);
+        Dispatcher.UIThread.Post(RenderOverview);
     }
 
     /// <summary>
@@ -93,7 +95,7 @@ public partial class HomeView : UserControl
         finally
         {
             _isBatchOperating = false;
-            RenderNetworks();
+            RenderOverview();
         }
     }
 
@@ -118,72 +120,56 @@ public partial class HomeView : UserControl
         finally
         {
             _isBatchOperating = false;
-            RenderNetworks();
+            RenderOverview();
         }
     }
 
     /// <summary>
-    /// 启动或停止表格行对应的单个网络。
+    /// 响应网络快照行点击并打开对应网络详情。
     /// </summary>
-    /// <param name="sender">触发事件的行内操作按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="sender">触发事件的快照行按钮，类型为对象，可为空，非必填。</param>
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private async void NetworkRowActionButton_Click(object? sender, RoutedEventArgs e)
+    private void SnapshotRowButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: long profileId } || _runtimeManager is null) return;
-        var profile = _profiles.FirstOrDefault(item => item.Id == profileId);
-        if (profile is null) return;
-
-        var status = _runtimeManager.GetStatus(profile.InstanceName);
-        // 运行中或状态切换中的网络执行停止，其余状态执行启动。
-        if (status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping)
+        if (sender is Button { Tag: long profileId })
         {
-            await _runtimeManager.StopAsync(profile.InstanceName);
-        }
-        else
-        {
-            await _runtimeManager.StartAsync(profile);
+            _openNetworkDetail?.Invoke(profileId);
         }
     }
 
-    /// <summary>重建网络表格并刷新汇总状态和批量按钮。</summary>
-    private void RenderNetworks()
+    /// <summary>刷新汇总卡片、网络快照和批量按钮。</summary>
+    private void RenderOverview()
     {
         if (_repository is null || _runtimeManager is null) return;
         _profiles = _repository.GetAll().ToList();
         var runningCount = _runtimeManager.RunningCount;
+        var autoStartCount = _profiles.Count(profile => profile.AutoStart);
 
-        // 汇总行显示运行数量，没有已保存网络时提示引导。
-        if (_profiles.Count == 0)
-        {
-            SummaryStatusText.Text = "暂无网络";
-            SummaryStatusIndicator.Fill = StoppedBrush;
-        }
-        else
-        {
-            SummaryStatusText.Text = runningCount > 0 ? $"运行中 {runningCount} / {_profiles.Count}" : "全部网络已停止";
-            SummaryStatusIndicator.Fill = runningCount > 0 ? RunningBrush : StoppedBrush;
-        }
+        // 服务状态卡片显示整体运行情况；没有网络时视为未运行。
+        ServiceStatusValueText.Text = runningCount > 0 ? "运行中" : "未运行";
+        ServiceStatusDescriptionText.Text = $"运行中 {runningCount} / {_profiles.Count} 个网络";
+        SummaryStatusIndicator.Fill = runningCount > 0 ? RunningBrush : StoppedBrush;
+        NetworkTotalValueText.Text = _profiles.Count.ToString();
+        AutoStartValueText.Text = autoStartCount.ToString();
         UpdateBatchButtons();
 
-        NetworkRowsPanel.Children.Clear();
+        NetworkSnapshotPanel.Children.Clear();
         if (_profiles.Count == 0)
         {
             var hint = new TextBlock
             {
                 Classes = { "muted" },
-                Text = "暂无网络，请在网络配置页新建网络",
+                Text = "暂无网络，请在“网络”页新建网络",
                 FontSize = 12,
-                Margin = new Thickness(0, 12)
+                Margin = new Thickness(4, 8)
             };
-            NetworkRowsPanel.Children.Add(hint);
+            NetworkSnapshotPanel.Children.Add(hint);
             return;
         }
 
-        for (var index = 0; index < _profiles.Count; index++)
+        foreach (var profile in _profiles)
         {
-            var isLastRow = index == _profiles.Count - 1; // 标记是否为最后一行，用于省略底部分隔线。
-            var profile = _profiles[index];
-            NetworkRowsPanel.Children.Add(CreateNetworkRow(profile, _runtimeManager.GetStatus(profile.InstanceName), isLastRow));
+            NetworkSnapshotPanel.Children.Add(CreateSnapshotRow(profile, _runtimeManager.GetStatus(profile.InstanceName)));
         }
     }
 
@@ -197,33 +183,35 @@ public partial class HomeView : UserControl
     }
 
     /// <summary>
-    /// 创建一行网络状态表格。
+    /// 创建一行可点击的网络快照。
     /// </summary>
     /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
     /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
-    /// <param name="isLastRow">是否为最后一行，类型为 bool；为真时不绘制底部分隔线。</param>
-    /// <returns>表格行控件，类型为 Border。</returns>
-    private Border CreateNetworkRow(NetworkProfile profile, CoreProcessStatus status, bool isLastRow)
+    /// <returns>快照行控件，类型为 Button。</returns>
+    private Button CreateSnapshotRow(NetworkProfile profile, CoreProcessStatus status)
     {
-        var row = new Border
+        var rowButton = new Button
         {
-            MinHeight = 44,
-            BorderBrush = new SolidColorBrush(Color.Parse("#EEF1F5")),
-            BorderThickness = isLastRow ? new Thickness(0) : new Thickness(0, 0, 0, 1)
+            Classes = { "snapshot-row" },
+            Tag = profile.Id,
+            Margin = new Thickness(0, 0, 0, 4)
         };
+        rowButton.Click += SnapshotRowButton_Click;
 
         var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.4, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.6, GridUnitType.Star)));
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(96, GridUnitType.Pixel)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(120, GridUnitType.Pixel)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(88, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(140, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(28, GridUnitType.Pixel)));
 
         var nameText = new TextBlock
         {
-            Classes = { "cell" },
             Text = profile.ProfileName,
-            FontWeight = FontWeight.Medium
+            FontSize = 12,
+            FontWeight = FontWeight.Medium,
+            Foreground = new SolidColorBrush(Color.Parse("#344054")),
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
         grid.Children.Add(nameText);
 
@@ -233,22 +221,12 @@ public partial class HomeView : UserControl
         {
             Text = subnetConfigured ? profile.Ipv4!.Trim() : "自动分配",
             FontSize = 12,
+            Foreground = new SolidColorBrush(Color.Parse(subnetConfigured ? "#475467" : "#98A2B3")),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
-        subnetText.Classes.Add(subnetConfigured ? "cell" : "cell-muted");
         Grid.SetColumn(subnetText, 1);
         grid.Children.Add(subnetText);
-
-        var autoStartText = new TextBlock
-        {
-            Text = profile.AutoStart ? "是" : "否",
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = profile.AutoStart ? AutoStartBrush : StoppedBrush
-        };
-        Grid.SetColumn(autoStartText, 2);
-        grid.Children.Add(autoStartText);
 
         var statusBrush = GetStatusBrush(status);
         var statusPanel = new StackPanel
@@ -271,27 +249,22 @@ public partial class HomeView : UserControl
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = statusBrush
         });
-        Grid.SetColumn(statusPanel, 3);
+        Grid.SetColumn(statusPanel, 2);
         grid.Children.Add(statusPanel);
 
-        // 运行中和停止中的行显示停止按钮，其余状态显示启动按钮；状态切换期间禁用。
-        var isStopAction = status is CoreProcessStatus.Running or CoreProcessStatus.Stopping;
-        var actionButton = new Button
+        // 行尾箭头提示该行可以进入网络详情。
+        var chevron = new TextBlock
         {
-            Content = isStopAction ? "停止" : "启动",
-            IsEnabled = status is CoreProcessStatus.Running or CoreProcessStatus.Stopped or CoreProcessStatus.Failed,
-            Tag = profile.Id,
-            HorizontalAlignment = HorizontalAlignment.Left,
+            Text = "›",
+            FontSize = 16,
+            Foreground = new SolidColorBrush(Color.Parse("#98A2B3")),
             VerticalAlignment = VerticalAlignment.Center
         };
-        actionButton.Classes.Add("row-action");
-        actionButton.Classes.Add(isStopAction ? "outline" : "accent");
-        actionButton.Click += NetworkRowActionButton_Click;
-        Grid.SetColumn(actionButton, 4);
-        grid.Children.Add(actionButton);
+        Grid.SetColumn(chevron, 3);
+        grid.Children.Add(chevron);
 
-        row.Child = grid;
-        return row;
+        rowButton.Content = grid;
+        return rowButton;
     }
 
     /// <summary>

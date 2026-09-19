@@ -16,10 +16,10 @@ public partial class MainWindow : SukiWindow
 {
     private readonly NetworkRuntimeManager _runtimeManager;
     private readonly NetworkProfileRepository _profileRepository;
+    private readonly ServerEndpointRepository _serverRepository;
     private readonly HomeView _homeView;
     private readonly NetworkView _networkView;
-    private readonly NodesView _nodesView;
-    private readonly RoutesView _routesView;
+    private readonly ServersView _serversView;
     private readonly LogsView _logsView;
     private readonly SettingsView _settingsView;
     private readonly AboutView _aboutView;
@@ -30,12 +30,12 @@ public partial class MainWindow : SukiWindow
     public MainWindow()
     {
         _profileRepository = new NetworkProfileRepository(ApplicationLogging.GetRequiredDatabase());
+        _serverRepository = new ServerEndpointRepository(ApplicationLogging.GetRequiredDatabase());
         EnsureDefaultProfile();
         _runtimeManager = new NetworkRuntimeManager();
-        _networkView = new NetworkView(_profileRepository, _runtimeManager);
-        _homeView = new HomeView(_profileRepository, _runtimeManager);
-        _nodesView = new NodesView();
-        _routesView = new RoutesView();
+        _networkView = new NetworkView(_profileRepository, _serverRepository, _runtimeManager);
+        _homeView = new HomeView(_profileRepository, _runtimeManager, OpenNetworkFromHome);
+        _serversView = new ServersView(_serverRepository);
         _logsView = new LogsView(_runtimeManager);
         _settingsView = new SettingsView();
         _aboutView = new AboutView();
@@ -54,12 +54,22 @@ public partial class MainWindow : SukiWindow
     {
         HomeNavigationButton.Click += Navigate_Click;
         NetworkNavigationButton.Click += Navigate_Click;
-        NodesNavigationButton.Click += Navigate_Click;
-        RoutesNavigationButton.Click += Navigate_Click;
+        ServersNavigationButton.Click += Navigate_Click;
         LogsNavigationButton.Click += Navigate_Click;
         SettingsNavigationButton.Click += Navigate_Click;
         AboutNavigationButton.Click += Navigate_Click;
         Closed += MainWindow_Closed;
+    }
+
+    /// <summary>
+    /// 从主页网络快照进入对应网络的详情页。
+    /// </summary>
+    /// <param name="profileId">目标网络主键，类型为 long，取值为大于零的数据库主键，必填。</param>
+    private void OpenNetworkFromHome(long profileId)
+    {
+        PageHost.Content = _networkView;
+        SetSelectedNavigation("network");
+        _networkView.OpenNetworkDetail(profileId);
     }
 
     /// <summary>
@@ -146,8 +156,7 @@ public partial class MainWindow : SukiWindow
         {
             "home" => _homeView,
             "network" => _networkView,
-            "nodes" => _nodesView,
-            "routes" => _routesView,
+            "servers" => _serversView,
             "logs" => _logsView,
             "settings" => _settingsView,
             "about" => _aboutView,
@@ -159,15 +168,14 @@ public partial class MainWindow : SukiWindow
     /// <summary>
     /// 更新左侧导航按钮的选中视觉状态。
     /// </summary>
-    /// <param name="pageKey">页面标识，类型为字符串，取值为 home、network、nodes、routes、logs 或 settings，必填。</param>
+    /// <param name="pageKey">页面标识，类型为字符串，取值为 home、network、servers、logs、settings 或 about，必填。</param>
     private void SetSelectedNavigation(string pageKey)
     {
-        var navigationButtons = new[]
+        var navigationButtons = new Control[]
         {
             HomeNavigationButton,
             NetworkNavigationButton,
-            NodesNavigationButton,
-            RoutesNavigationButton,
+            ServersNavigationButton,
             LogsNavigationButton,
             SettingsNavigationButton,
             AboutNavigationButton
@@ -183,8 +191,7 @@ public partial class MainWindow : SukiWindow
         {
             "home" => HomeNavigationButton,
             "network" => NetworkNavigationButton,
-            "nodes" => NodesNavigationButton,
-            "routes" => RoutesNavigationButton,
+            "servers" => ServersNavigationButton,
             "logs" => LogsNavigationButton,
             "settings" => SettingsNavigationButton,
             "about" => AboutNavigationButton,
