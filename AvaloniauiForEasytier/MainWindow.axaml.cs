@@ -114,13 +114,12 @@ public partial class MainWindow : SukiWindow
             SidebarToggleButton.Margin = new Thickness(0);
         }
 
-        // 收起时导航按钮只显示无边框居中的图标，呈现标准图标栏样式；展开时恢复原有描边和文字。
+        // 收起时导航按钮只显示居中图标，展开时恢复左对齐文字；两种模式都不绘制按钮描边。
         var contentAlignment = _isSidebarCollapsed ? Avalonia.Layout.HorizontalAlignment.Center : Avalonia.Layout.HorizontalAlignment.Left;
         foreach (var button in GetNavigationButtons())
         {
             button.HorizontalContentAlignment = contentAlignment;
             button.Padding = _isSidebarCollapsed ? new Thickness(0, 7) : new Thickness(12, 7);
-            button.BorderThickness = _isSidebarCollapsed ? new Thickness(0) : new Thickness(1);
             if (button.Content is StackPanel panel)
             {
                 foreach (var text in panel.Children.OfType<TextBlock>())
@@ -130,8 +129,6 @@ public partial class MainWindow : SukiWindow
             }
         }
 
-        // 收起按钮自身同样去掉描边，避免收起态出现悬浮方框。
-        SidebarToggleButton.BorderThickness = _isSidebarCollapsed ? new Thickness(0) : new Thickness(1);
         ToolTip.SetTip(SidebarToggleButton, _isSidebarCollapsed ? "展开侧边栏" : "收起侧边栏");
     }
 
