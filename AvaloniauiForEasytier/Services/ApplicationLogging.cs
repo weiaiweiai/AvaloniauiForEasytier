@@ -108,6 +108,7 @@ public static class ApplicationLogging
                 _freeSql.CodeFirst.SyncStructure<CriticalLogRecord>();
                 _freeSql.CodeFirst.SyncStructure<NetworkProfile>();
                 _freeSql.CodeFirst.SyncStructure<ServerEndpoint>();
+                _freeSql.CodeFirst.SyncStructure<ApplicationSettings>();
 
                 var databaseTarget = new FreeSqlCriticalLogTarget(_freeSql)
                 {

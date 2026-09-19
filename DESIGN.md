@@ -67,7 +67,7 @@ ApplicationLogging
 
 1. `Program.Main` 在创建 Avalonia 应用前初始化日志模块。
 2. `App` 加载 SukiUI 绿色浅色主题，并创建 `MainWindow`。
-3. `MainWindow` 初始化 `NetworkProfileRepository`、`ServerEndpointRepository` 和 `NetworkRuntimeManager`，从 `application.db` 读取全部网络和服务器地址。
+3. `MainWindow` 初始化 `NetworkProfileRepository`、`ServerEndpointRepository`、`ApplicationSettingsRepository` 和 `NetworkRuntimeManager`，从 `application.db` 读取全部网络、服务器地址和应用设置。
 4. 首页、网络页、系统日志页和主窗口共享同一个多实例管理器，每个 `InstanceName` 对应一个独立 FFI 运行时。
 5. 主窗口关闭时依次停止并释放全部运行时；应用启动时会自动启动标记为 `AutoStart` 的配置。
 6. Avalonia 生命周期结束后关闭 NLog，等待异步目标刷新，再释放 FreeSql。
@@ -272,12 +272,16 @@ listeners = []
 - 通知级别
 - 核心服务、网络行为、日志与诊断、关于等设置类别
 
-当前所有设置均未实现持久化和应用逻辑：
+#### 已实现功能
 
-- “保存设置”没有绑定事件。
+- 常规设置的全部七项保存到 `application.db` 的 `ApplicationSettings` 表（全局仅一行）。
+- 进入设置页时从数据库读取设置并回填控件；首次运行自动写入默认设置行。
+- “保存设置”按钮把界面值写入数据库，并在按钮旁显示保存结果和最后修改时间；读取或保存失败时提示并记录错误日志。
+
+#### 界面预留功能
+
 - 左侧设置类别点击后不会切换内容；该问题已记录在 `ISSUES.md`。
-- 开机启动、托盘、更新、主题、密度和通知控件只改变当前控件状态，不会改变应用行为。
-- 设置尚未保存到 `application.db`。
+- 开机启动、托盘、更新、主题、密度和通知设置已持久化，但尚未应用到实际行为（托盘、开机启动、动态主题等能力未实现）。
 
 ### 6.6 关于
 
@@ -395,7 +399,7 @@ listeners = []
 <软件根目录>/application.db
 ```
 
-数据库使用通用文件名，承载关键日志和网络、服务器等应用数据；当前创建 `CriticalLogs`、`NetworkProfiles` 和 `ServerEndpoints` 三张表。
+数据库使用通用文件名，承载关键日志和网络、服务器、应用设置等应用数据；当前创建 `CriticalLogs`、`NetworkProfiles`、`ServerEndpoints` 和 `ApplicationSettings` 四张表。
 
 `CriticalLogs` 表结构：
 
@@ -434,7 +438,21 @@ listeners = []
 | `CreatedAt` | `DateTime` | 记录创建时间 |
 | `UpdatedAt` | `DateTime` | 记录最后修改时间 |
 
-FreeSql 启动时同步 `CriticalLogRecord`、`NetworkProfile` 和 `ServerEndpoint` 对应的表结构。
+`ApplicationSettings` 表结构（全局仅一行，主键固定为一，不使用自增）：
+
+| 字段 | 类型 | 用途 |
+| --- | --- | --- |
+| `Id` | `long`，主键固定为一 | 全局唯一设置行标识 |
+| `LaunchAtLogin` | `bool` | 登录系统后自动启动控制台 |
+| `MinimizeToTray` | `bool` | 关闭窗口时最小化到托盘并后台运行 |
+| `CheckForUpdates` | `bool` | 启动后自动检查更新 |
+| `ThemeMode` | `string`/SQLite `TEXT` | 主题模式，取值为 `FollowSystem`、`Light` 或 `Dark` |
+| `UiDensity` | `string`/SQLite `TEXT` | 界面密度，取值为 `Comfortable` 或 `Compact` |
+| `StatusNotification` | `bool` | 网络状态变化时弹出系统通知 |
+| `NotificationLevel` | `string`/SQLite `TEXT` | 通知级别，取值为 `ErrorsOnly`、`WarningsAndErrors` 或 `All` |
+| `UpdatedAt` | `DateTime` | 设置最后修改时间 |
+
+FreeSql 启动时同步 `CriticalLogRecord`、`NetworkProfile`、`ServerEndpoint` 和 `ApplicationSettings` 对应的表结构。设置行由 `ApplicationSettingsRepository.GetOrCreate` 在首次读取时写入默认值。
 
 ### 9.4 降级策略
 
@@ -503,6 +521,7 @@ WinDivert64.sys
 - 首页总览（汇总卡片、网络快照、批量启停、最近活动），快照行可进入网络详情。
 - 网络页以网络为主体：二级边栏选择网络，详情页集中启停、配置以及节点和路由标签页。
 - 服务器地址簿的增删改查，以及网络配置中勾选服务器地址同步入口节点文本。
+- 应用设置的数据库持久化：设置页读取回填，“保存设置”写入 `application.db`。
 - 通过 FFI 解析配置、并行启动多个实例和按名称停止实例。
 - 首页、网络页、主窗口状态栏和系统日志页共享多实例运行状态。
 - 运行时输出在系统日志页显示。
@@ -517,7 +536,7 @@ WinDivert64.sys
 - 首页在线节点、本机虚拟 IP、连接质量等单网络统计数据。
 - 服务器地址的格式校验。
 - 日志筛选、搜索、暂停、导出、详情和历史查询。
-- 应用设置分类切换、保存与生效。
+- 应用设置分类切换与设置项实际生效（托盘、开机启动、动态主题、系统通知等）。
 - 系统托盘、开机启动、更新检查和系统通知。
 - 动态主题和界面密度。
 - 动态版本、运行环境和 EasyTier Core 版本检测。

@@ -18,6 +18,7 @@ public partial class MainWindow : SukiWindow
     private readonly NetworkRuntimeManager _runtimeManager;
     private readonly NetworkProfileRepository _profileRepository;
     private readonly ServerEndpointRepository _serverRepository;
+    private readonly ApplicationSettingsRepository _settingsRepository;
     private readonly HomeView _homeView;
     private readonly NetworkView _networkView;
     private readonly ServersView _serversView;
@@ -33,13 +34,14 @@ public partial class MainWindow : SukiWindow
     {
         _profileRepository = new NetworkProfileRepository(ApplicationLogging.GetRequiredDatabase());
         _serverRepository = new ServerEndpointRepository(ApplicationLogging.GetRequiredDatabase());
+        _settingsRepository = new ApplicationSettingsRepository(ApplicationLogging.GetRequiredDatabase());
         EnsureDefaultProfile();
         _runtimeManager = new NetworkRuntimeManager();
         _networkView = new NetworkView(_profileRepository, _serverRepository, _runtimeManager);
         _homeView = new HomeView(_profileRepository, _runtimeManager, OpenNetworkFromHome);
         _serversView = new ServersView(_serverRepository);
         _logsView = new LogsView(_runtimeManager);
-        _settingsView = new SettingsView();
+        _settingsView = new SettingsView(_settingsRepository);
         _aboutView = new AboutView();
         InitializeComponent();
         RegisterUiEvents();
