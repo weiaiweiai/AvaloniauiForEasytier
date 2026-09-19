@@ -42,18 +42,25 @@
             <Setter Property="BorderBrush" Value="#C7CED8" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
-        <Style Selector="Button.profile-item">
+        <Style Selector="Border.sidebar-item">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="Padding" Value="9,7" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,0,5" />
         </Style>
-        <Style Selector="Button.profile-item.selected">
+        <Style Selector="Border.sidebar-item.selected">
             <Setter Property="Background" Value="#E7F5F2" />
             <Setter Property="BorderBrush" Value="#0F9F8F" />
+        </Style>
+        <Style Selector="Button.item-select">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,7" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.quick-toggle">
             <Setter Property="Width" Value="24" />

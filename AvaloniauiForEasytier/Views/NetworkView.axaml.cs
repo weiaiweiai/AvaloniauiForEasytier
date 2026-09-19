@@ -123,24 +123,47 @@ public partial class NetworkView : UserControl
 
         foreach (var profile in _sidebarProfiles)
         {
-            var status = _runtimeManager.GetStatus(profile.InstanceName);
-            var button = new Button
-            {
-                Content = BuildSidebarItemContent(profile, status, CreateQuickToggleButton(profile.Id, status)),
-                Tag = profile.Id,
-                Margin = new Thickness(0, 0, 0, 5)
-            };
-            button.Classes.Add("profile-item");
-
-            // 只有主键匹配选中网络的条目显示选中状态。
-            if (profile.Id == selectedId)
-            {
-                button.Classes.Add("selected");
-            }
-
-            button.Click += SidebarItemButton_Click;
-            NetworkSidebarPanel.Children.Add(button);
+            NetworkSidebarPanel.Children.Add(BuildSidebarItem(profile, selectedId));
         }
+    }
+
+    /// <summary>
+    /// 构造一个网络条目：外层容器内并列放置选中按钮和快捷启停按钮。
+    /// </summary>
+    /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
+    /// <param name="selectedId">当前选中网络主键，类型为 long，取值为零或正数，必填。</param>
+    /// <returns>条目容器控件，类型为 Border。</returns>
+    private Border BuildSidebarItem(NetworkProfile profile, long selectedId)
+    {
+        var status = _runtimeManager!.GetStatus(profile.InstanceName);
+
+        // 容器负责选中高亮样式；内部两个按钮并列，互不嵌套，保证快捷启停可点击。
+        var container = new Border { Classes = { "sidebar-item" } };
+        if (profile.Id == selectedId)
+        {
+            container.Classes.Add("selected");
+        }
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(32, GridUnitType.Pixel)));
+
+        var selectButton = new Button
+        {
+            Classes = { "item-select" },
+            Content = BuildSidebarItemContent(profile, status),
+            Tag = profile.Id
+        };
+        selectButton.Click += SidebarItemButton_Click;
+        grid.Children.Add(selectButton);
+
+        var quickButton = CreateQuickToggleButton(profile.Id, status);
+        quickButton.Margin = new Thickness(0, 0, 4, 0);
+        Grid.SetColumn(quickButton, 1);
+        grid.Children.Add(quickButton);
+
+        container.Child = grid;
+        return container;
     }
 
     /// <summary>
@@ -179,8 +202,7 @@ public partial class NetworkView : UserControl
     /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
     private async void SidebarQuickToggleButton_Click(object? sender, RoutedEventArgs e)
     {
-        // 阻止事件冒泡到条目按钮，避免快捷启停时切换正在编辑的网络。
-        e.Handled = true;
+        // 快捷按钮与选中按钮并列，只启停对应网络，不改变当前选中网络。
         if (_runtimeManager is null || sender is not Button { Tag: long profileId }) return;
         var profile = _sidebarProfiles.FirstOrDefault(item => item.Id == profileId);
         if (profile is null) return;
@@ -199,18 +221,13 @@ public partial class NetworkView : UserControl
     }
 
     /// <summary>
-    /// 构造侧边栏网络条目的显示内容。
+    /// 构造侧边栏网络条目的文字内容。
     /// </summary>
     /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
     /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
-    /// <param name="quickToggleButton">条目右侧的快捷启停按钮，类型为 Control，不可为空，必填。</param>
     /// <returns>条目内容控件，类型为 Control。</returns>
-    private static Control BuildSidebarItemContent(NetworkProfile profile, CoreProcessStatus status, Control quickToggleButton)
+    private static Control BuildSidebarItemContent(NetworkProfile profile, CoreProcessStatus status)
     {
-        var root = new Grid();
-        root.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
-        root.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(30, GridUnitType.Pixel)));
-
         var content = new StackPanel { Spacing = 3 };
         content.Children.Add(new TextBlock
         {
@@ -240,11 +257,7 @@ public partial class NetworkView : UserControl
             TextTrimming = TextTrimming.CharacterEllipsis
         });
         content.Children.Add(detailPanel);
-
-        root.Children.Add(content);
-        Grid.SetColumn(quickToggleButton, 1);
-        root.Children.Add(quickToggleButton);
-        return root;
+        return content;
     }
 
     /// <summary>
