@@ -175,11 +175,11 @@ ApplicationLogging
 
 | 界面字段 | TOML 字段 | 处理规则 |
 | --- | --- | --- |
-| 实例名称 | `inst_name` | 每个网络必须唯一 |
-| 虚拟网络名称 | `network_name` | 空值时使用 `easytier` |
-| 认证密钥 | `network_secret` | 非空时写入 |
+| 实例名称 | `instance_name` | 每个网络必须唯一；缺失时 EasyTier 会回退为 `default`，导致多网络实例冲突 |
+| 虚拟网络名称 | `network_identity.network_name` | 以内联表写入，空值时使用 `easytier` |
+| 认证密钥 | `network_identity.network_secret` | 非空时写入内联表 |
 | 虚拟网段 | `ipv4` | 非空时写入 |
-| 入口节点地址 | `peers` | 文本框每行一个地址，去重后写入数组 |
+| 入口节点地址 | `peer[].uri` | 文本框每行一个地址，去重后写入内联表数组 |
 | 本机节点名称 | `hostname` | 非空时写入 |
 
 生成配置时始终追加：
@@ -188,7 +188,7 @@ ApplicationLogging
 listeners = []
 ```
 
-该默认值用于避免用户没有配置入口节点时意外监听外部地址。所有字符串在写入 TOML 前会转义反斜杠和双引号。
+该默认值用于避免用户没有配置入口节点时意外监听外部地址。所有字符串在写入 TOML 前会转义反斜杠和双引号。键名与 `easytier-core` 的 TOML `Config` 结构一致：`instance_name`、`network_identity` 内联表和 `peer` 数组；网络标识使用内联表是为了保持全部键在 TOML 根表中，避免表头改变后续键的归属。
 
 配置保存到 `application.db` 的 `NetworkProfiles` 表，运行时启动时从配置对象生成 TOML；同一进程中多个网络由 `NetworkRuntimeManager` 独立管理。
 

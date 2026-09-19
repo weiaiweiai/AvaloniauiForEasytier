@@ -1,5 +1,6 @@
 using FreeSql.DataAnnotations;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -62,14 +63,9 @@ public sealed class NetworkProfile
     public string BuildTomlConfiguration()
     {
         var builder = new StringBuilder();
-        builder.AppendLine($"inst_name = {QuoteToml(InstanceName)}");
-        builder.AppendLine($"network_name = {QuoteToml(NetworkName)}");
 
-        // 只有用户填写认证密钥时才写入配置，保留 EasyTier 的无密钥连接行为。
-        if (!string.IsNullOrWhiteSpace(NetworkSecret))
-        {
-            builder.AppendLine($"network_secret = {QuoteToml(NetworkSecret.Trim())}");
-        }
+        // EasyTier 配置结构的键名为 instance_name；缺省时 FFI 会回退为 default，导致多网络实例冲突。
+        builder.AppendLine($"instance_name = {QuoteToml(InstanceName)}");
 
         // 只有用户指定虚拟地址时才关闭 EasyTier 的默认地址选择逻辑。
         if (!string.IsNullOrWhiteSpace(Ipv4))
@@ -83,18 +79,33 @@ public sealed class NetworkProfile
             builder.AppendLine($"hostname = {QuoteToml(Hostname.Trim())}");
         }
 
+        // 未配置监听地址时不主动暴露端口，网络仍可通过入口节点建立连接。
+        builder.AppendLine("listeners = []");
+
+        // 网络标识使用内联表并保持在根表位置，避免 TOML 表头改变后续键的归属。
+        var identityParts = new List<string> { $"network_name = {QuoteToml(NetworkName)}" };
+
+        // 只有用户填写认证密钥时才写入配置，保留 EasyTier 的无密钥连接行为。
+        if (!string.IsNullOrWhiteSpace(NetworkSecret))
+        {
+            identityParts.Add($"network_secret = {QuoteToml(NetworkSecret.Trim())}");
+        }
+
+        builder.AppendLine($"network_identity = {{ {string.Join(", ", identityParts)} }}");
+
         var peers = (PeerUris ?? string.Empty)
             .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(peer => !string.IsNullOrWhiteSpace(peer))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
+
+        // 入口节点键名为 peer，每项是含 uri 字段的内联表。
         if (peers.Length > 0)
         {
-            builder.AppendLine($"peers = [{string.Join(", ", peers.Select(QuoteToml))}]");
+            var peerEntries = string.Join(", ", peers.Select(peer => $"{{ uri = {QuoteToml(peer)} }}"));
+            builder.AppendLine($"peer = [{peerEntries}]");
         }
 
-        // 未配置监听地址时不主动暴露端口，网络仍可通过入口节点建立连接。
-        builder.AppendLine("listeners = []");
         return builder.ToString();
     }
 
