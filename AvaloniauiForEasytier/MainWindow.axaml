@@ -102,15 +102,15 @@
             </Grid.ColumnDefinitions>
             <Border Grid.Column="0" Background="{StaticResource NavigationBrush}" BorderBrush="#121923" BorderThickness="0,0,1,0">
                 <Grid RowDefinitions="Auto,Auto,*,Auto">
-                    <Grid Margin="12,15,10,12" ColumnDefinitions="Auto,*,Auto">
-                        <Border Width="30" Height="30" Background="{StaticResource AccentBrush}" CornerRadius="6">
+                    <Grid x:Name="SidebarHeaderGrid" Margin="12,15,10,12" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+                        <Border x:Name="SidebarLogo" Grid.Row="0" Grid.Column="0" Width="30" Height="30" Background="{StaticResource AccentBrush}" CornerRadius="6">
                             <PathIcon Width="17" Height="17" Foreground="White" Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,10.5L10,13.5L17,6.5L18.5,8L10,16.5L5.5,12L7,10.5Z" />
                         </Border>
-                        <StackPanel x:Name="SidebarTitlePanel" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center" Spacing="0">
+                        <StackPanel x:Name="SidebarTitlePanel" Grid.Row="0" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center" Spacing="0">
                             <TextBlock Classes="shell-title" Text="EasyTier" />
                             <TextBlock FontSize="10" Foreground="#91A0B2" Text="桌面控制台" />
                         </StackPanel>
-                        <Button x:Name="SidebarToggleButton" Grid.Column="2" Width="26" Height="26" Padding="4" Background="Transparent" VerticalAlignment="Center" ToolTip.Tip="收起侧边栏">
+                        <Button x:Name="SidebarToggleButton" Grid.Row="0" Grid.Column="2" Width="26" Height="26" Padding="4" Background="Transparent" VerticalAlignment="Center" ToolTip.Tip="收起侧边栏">
                             <PathIcon Width="15" Height="15" Foreground="#91A0B2" Data="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
                         </Button>
                     </Grid>
