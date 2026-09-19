@@ -40,7 +40,7 @@ public sealed class NetworkProfile
     [Column(DbType = "TEXT", IsNullable = true)]
     public string? Hostname { get; set; }
 
-    /// <summary>按行保存的入口节点地址；未设置时为空。</summary>
+    /// <summary>按行保存的信令服务器地址（EasyTier 入口节点）；未设置时为空。</summary>
     [Column(DbType = "TEXT", IsNullable = true)]
     public string? PeerUris { get; set; }
 

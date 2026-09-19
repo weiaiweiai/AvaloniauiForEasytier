@@ -176,10 +176,10 @@ ApplicationLogging
 | 界面字段 | TOML 字段 | 处理规则 |
 | --- | --- | --- |
 | 实例名称 | `instance_name` | 每个网络必须唯一；缺失时 EasyTier 会回退为 `default`，导致多网络实例冲突 |
-| 虚拟网络名称 | `network_identity.network_name` | 以内联表写入，空值时使用 `easytier` |
-| 认证密钥 | `network_identity.network_secret` | 非空时写入内联表 |
+| 虚拟网络名称 | `network_identity.network_name` | 以内联表写入，空值时使用 `easytier`；界面中与认证密钥同行展示 |
+| 认证密钥 | `network_identity.network_secret` | 非空时写入内联表；界面中与虚拟网络名称同行展示 |
 | 虚拟网段 | `ipv4` | 非空时写入 |
-| 入口节点地址 | `peer[].uri` | 文本框每行一个地址，去重后写入内联表数组 |
+| 信令服务器地址 | `peer[].uri` | 勾选服务器地址簿条目，去重后写入内联表数组 |
 | 本机节点名称 | `hostname` | 非空时写入 |
 
 生成配置时始终追加：
@@ -204,15 +204,16 @@ listeners = []
 
 #### 服务器地址簿集成
 
-- 配置标签页的连接参数区提供“从服务器列表选择”弹出勾选列表。
-- 勾选服务器时把地址追加为入口节点地址的一行，取消勾选时移除对应行；文本框仍可手工编辑。
+- 配置标签页的连接参数区以“信令服务器地址”勾选列表直接展示服务器地址簿条目，勾选即纳入网络，取消勾选后保存即移除。
+- 配置中已保存但不在地址簿中的地址以“自定义地址”条目保留，避免数据丢失。
+- 服务器地址簿在“服务器列表”页维护；打开或切换网络详情时按最新地址簿重建列表。
 
 #### 已实现功能
 
 - 新建网络、二级边栏网络列表读取与选择。
 - 保存、删除网络并写入 `application.db`；校验 `InstanceName` 在网络列表中唯一。
 - 详情头部的单独启停；运行中的网络禁止保存修改和删除。
-- 服务器地址勾选与入口节点地址文本双向同步。
+- 信令服务器地址以勾选列表方式选择并随保存写入数据库。
 
 导入和导出按钮仍是界面预留功能。
 
@@ -423,7 +424,7 @@ listeners = []
 | `NetworkSecret` | 可空 `string`/SQLite `TEXT` | 认证密钥 |
 | `Ipv4` | 可空 `string`/SQLite `TEXT` | 本机虚拟地址和网段 |
 | `Hostname` | 可空 `string`/SQLite `TEXT` | 本机节点名称 |
-| `PeerUris` | 可空 `string`/SQLite `TEXT` | 按行保存的入口节点地址 |
+| `PeerUris` | 可空 `string`/SQLite `TEXT` | 按行保存的信令服务器地址 |
 | `AutoStart` | `bool` | 应用启动后自动运行 |
 | `CreatedAt` | `DateTime` | 配置创建时间 |
 | `UpdatedAt` | `DateTime` | 配置最后修改时间 |

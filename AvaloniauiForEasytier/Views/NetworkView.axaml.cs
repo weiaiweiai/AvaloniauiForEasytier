@@ -47,7 +47,6 @@ public partial class NetworkView : UserControl
         StartNetworkButton.Click += StartNetworkButton_Click;
         DeleteNetworkButton.Click += DeleteNetworkButton_Click;
         SaveProfileButton.Click += SaveProfileButton_Click;
-        PickServersButton.Click += PickServersButton_Click;
         _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
         ClearSelection();
     }
@@ -406,7 +405,7 @@ public partial class NetworkView : UserControl
         profile.NetworkSecret = EmptyToNull(NetworkSecretTextBox.Text);
         profile.Ipv4 = EmptyToNull(Ipv4TextBox.Text);
         profile.Hostname = EmptyToNull(HostnameTextBox.Text);
-        profile.PeerUris = EmptyToNull(PeerTextBox.Text);
+        profile.PeerUris = CollectSelectedPeerAddresses(); // 按勾选列表收集信令服务器地址。
         profile.AutoStart = AutoStartToggle.IsChecked == true;
         if (_repository.IsInstanceNameUsed(profile.InstanceName, profile.Id)) { ProfileStatusText.Text = "实例名称已被其他网络使用"; return; }
         _repository.Save(profile);
@@ -417,25 +416,20 @@ public partial class NetworkView : UserControl
     }
 
     /// <summary>
-    /// 打开服务器地址勾选列表。
+    /// 按服务器地址簿和当前配置重建信令服务器地址勾选列表。
     /// </summary>
-    /// <param name="sender">触发事件的选择按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void PickServersButton_Click(object? sender, RoutedEventArgs e)
-    {
-        RebuildServerPicker();
-        ServerPickerPopup.IsOpen = true;
-    }
-
-    /// <summary>按数据库重建服务器地址勾选列表。</summary>
-    private void RebuildServerPicker()
+    /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
+    private void RenderServerAddressList(NetworkProfile profile)
     {
         if (_serverRepository is null) return;
-        ServerPickerPanel.Children.Clear();
+        ServerListPanel.Children.Clear();
+        var selectedLines = ParseStoredPeerLines(profile.PeerUris);
         var servers = _serverRepository.GetAll();
-        if (servers.Count == 0)
+
+        // 地址簿为空且配置中没有已保存地址时，提示先维护服务器列表。
+        if (servers.Count == 0 && selectedLines.Count == 0)
         {
-            ServerPickerPanel.Children.Add(new TextBlock
+            ServerListPanel.Children.Add(new TextBlock
             {
                 Classes = { "muted" },
                 FontSize = 11,
@@ -444,58 +438,70 @@ public partial class NetworkView : UserControl
             return;
         }
 
-        var currentLines = ParsePeerLines();
+        var usedAddresses = new List<string>(); // 地址簿中已展示的地址，用于识别配置里的自定义地址。
         foreach (var server in servers)
         {
-            var checkBox = new CheckBox
+            var address = server.Address.Trim();
+            usedAddresses.Add(address);
+            ServerListPanel.Children.Add(CreatePeerCheckBox($"{server.Name}（{address}）", address, selectedLines.Contains(address, StringComparer.Ordinal)));
+        }
+
+        // 配置中已保存但不在地址簿中的地址以自定义条目保留，勾选状态保持原样，避免保存时丢失。
+        foreach (var line in selectedLines)
+        {
+            if (!usedAddresses.Contains(line, StringComparer.Ordinal))
             {
-                Content = new TextBlock
-                {
-                    Text = $"{server.Name}（{server.Address}）",
-                    FontSize = 12,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxWidth = 360
-                },
-                Tag = server,
-                IsChecked = currentLines.Contains(server.Address.Trim(), StringComparer.Ordinal)
-            };
-            checkBox.Click += ServerPickerCheckBox_Click;
-            ServerPickerPanel.Children.Add(checkBox);
+                ServerListPanel.Children.Add(CreatePeerCheckBox($"{line}（自定义地址）", line, true));
+            }
         }
     }
 
     /// <summary>
-    /// 响应服务器地址勾选变化，同步入口节点地址文本。
+    /// 创建一个信令服务器地址勾选行。
     /// </summary>
-    /// <param name="sender">触发事件的复选框，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void ServerPickerCheckBox_Click(object? sender, RoutedEventArgs e)
+    /// <param name="displayText">条目显示文本，类型为字符串，取值为名称加地址或自定义标注，必填。</param>
+    /// <param name="address">该条目对应的地址，类型为字符串，取值去除首尾空白的节点地址，必填。</param>
+    /// <param name="isChecked">是否勾选，类型为 bool；地址已在当前配置中时为真。</param>
+    /// <returns>勾选行控件，类型为 CheckBox。</returns>
+    private static CheckBox CreatePeerCheckBox(string displayText, string address, bool isChecked)
     {
-        if (sender is not CheckBox { Tag: ServerEndpoint server } checkBox) return;
-        var lines = ParsePeerLines();
-        var address = server.Address.Trim();
-
-        // 勾选时追加地址行，取消勾选时移除对应行。
-        var contains = lines.Contains(address, StringComparer.Ordinal);
-        if (checkBox.IsChecked == true && !contains)
+        var checkBox = new CheckBox
         {
-            lines.Add(address);
-        }
-        else if (checkBox.IsChecked != true && contains)
-        {
-            lines.RemoveAll(line => string.Equals(line, address, StringComparison.Ordinal));
-        }
-
-        PeerTextBox.Text = string.Join(Environment.NewLine, lines);
+            Content = new TextBlock
+            {
+                Text = displayText,
+                FontSize = 12,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            },
+            Tag = address, // Tag 保存提交时使用的地址文本。
+            IsChecked = isChecked
+        };
+        return checkBox;
     }
 
     /// <summary>
-    /// 解析入口节点地址文本框中的地址行。
+    /// 收集勾选中的信令服务器地址并按行合并。
     /// </summary>
+    /// <returns>按行合并的地址文本，类型为字符串可空值；没有勾选时返回 null。</returns>
+    private string? CollectSelectedPeerAddresses()
+    {
+        var addresses = ServerListPanel.Children.OfType<CheckBox>()
+            .Where(box => box.IsChecked == true && box.Tag is string)
+            .Select(box => ((string)box.Tag!).Trim())
+            .Where(address => address.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return addresses.Count == 0 ? null : string.Join(Environment.NewLine, addresses);
+    }
+
+    /// <summary>
+    /// 解析配置中按行保存的信令服务器地址。
+    /// </summary>
+    /// <param name="peerUris">按行保存的地址文本，类型为字符串，可为空，非必填。</param>
     /// <returns>去重后的地址行列表，类型为 List&lt;string&gt;。</returns>
-    private List<string> ParsePeerLines()
+    private static List<string> ParseStoredPeerLines(string? peerUris)
     {
-        return (PeerTextBox.Text ?? string.Empty)
+        return (peerUris ?? string.Empty)
             .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .Distinct(StringComparer.Ordinal)
@@ -514,7 +520,7 @@ public partial class NetworkView : UserControl
         NetworkSecretTextBox.Text = profile.NetworkSecret;
         Ipv4TextBox.Text = profile.Ipv4;
         HostnameTextBox.Text = profile.Hostname;
-        PeerTextBox.Text = profile.PeerUris;
+        RenderServerAddressList(profile); // 按地址簿和已保存地址重建信令服务器勾选列表。
         AutoStartToggle.IsChecked = profile.AutoStart;
 
         // 提示当前编辑来源：已保存网络已加载数据库参数，新网络尚未保存。
