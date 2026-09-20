@@ -134,7 +134,7 @@
             <TabControl Grid.Row="2" x:Name="DetailTabControl" Background="Transparent" BorderThickness="0">
                 <TabItem Header="配置">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                        <Grid RowDefinitions="Auto,14,Auto,14,Auto,14,Auto">
+                        <Grid RowDefinitions="Auto,14,Auto,14,Auto">
                             <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="4">
                                     <TextBlock Classes="section-title" FontSize="15" Text="网络参数" />
@@ -169,7 +169,7 @@
                             </Border>
 
                             <Border Grid.Row="4" Classes="panel" Background="#FBFCFD" Padding="15">
-                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*" ColumnSpacing="12" RowSpacing="11">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="180,*" ColumnSpacing="12" RowSpacing="11">
                                     <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto">
                                         <TextBlock Classes="section-title" Text="连接参数" />
                                         <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center" FontSize="10" Text="信令服务器在“服务器列表”页维护" />
@@ -180,24 +180,6 @@
                                             <StackPanel x:Name="ServerListPanel" Spacing="6" MinHeight="20" />
                                         </ScrollViewer>
                                     </Border>
-                                    <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="连接模式" />
-                                    <ComboBox Grid.Row="2" Grid.Column="1" Height="30" MinWidth="180" HorizontalAlignment="Left" SelectedIndex="0">
-                                        <ComboBoxItem Content="点对点" />
-                                        <ComboBoxItem Content="通过公共入口" />
-                                        <ComboBoxItem Content="仅本地" />
-                                    </ComboBox>
-                                </Grid>
-                            </Border>
-
-                            <Border Grid.Row="6" Classes="panel" Background="#FBFCFD" Padding="15">
-                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="180,*,180,*" ColumnSpacing="12" RowSpacing="11">
-                                    <TextBlock Grid.ColumnSpan="4" Classes="section-title" Text="高级选项" />
-                                    <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="启用 IPv6" />
-                                    <ToggleSwitch Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Classes="field-label" VerticalAlignment="Center" Text="允许局域网转发" />
-                                    <ToggleSwitch Grid.Row="1" Grid.Column="3" HorizontalAlignment="Left" OffContent="关闭" OnContent="开启" />
-                                    <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="自定义启动参数" />
-                                    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="30" PlaceholderText="可选，多个参数以空格分隔" />
                                 </Grid>
                             </Border>
                         </Grid>
