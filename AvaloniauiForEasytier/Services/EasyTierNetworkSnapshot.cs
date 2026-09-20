@@ -147,24 +147,24 @@ public static class EasyTierNetworkSnapshotParser
             snapshot.IsRunning = true;
         }
 
-        if (TryGetProperty(root, "errorMsg", out var errorElement) && errorElement.ValueKind == JsonValueKind.String)
+        if (TryGetProperty(root, "error_msg", out var errorElement) && errorElement.ValueKind == JsonValueKind.String)
         {
             snapshot.ErrorMessage = errorElement.GetString();
         }
 
-        if (TryGetProperty(root, "devName", out var deviceElement) && deviceElement.ValueKind == JsonValueKind.String)
+        if (TryGetProperty(root, "dev_name", out var deviceElement) && deviceElement.ValueKind == JsonValueKind.String)
         {
             snapshot.DeviceName = deviceElement.GetString();
         }
 
-        if (TryGetProperty(root, "myNodeInfo", out var myNodeElement) && myNodeElement.ValueKind == JsonValueKind.Object)
+        if (TryGetProperty(root, "my_node_info", out var myNodeElement) && myNodeElement.ValueKind == JsonValueKind.Object)
         {
-            if (TryGetProperty(myNodeElement, "peerId", out var myPeerElement))
+            if (TryGetProperty(myNodeElement, "peer_id", out var myPeerElement))
             {
                 snapshot.MyPeerId = ReadUInt32(myPeerElement);
             }
 
-            if (TryGetProperty(myNodeElement, "virtualIpv4", out var myIpElement))
+            if (TryGetProperty(myNodeElement, "virtual_ipv4", out var myIpElement))
             {
                 snapshot.VirtualIpv4 = ReadInetText(myIpElement);
             }
@@ -174,7 +174,7 @@ public static class EasyTierNetworkSnapshotParser
         }
 
         // 节点列表来自路由与连接信息的配对结果，已按公共服务器优先排序。
-        if (TryGetProperty(root, "peerRoutePairs", out var pairsElement) && pairsElement.ValueKind == JsonValueKind.Array)
+        if (TryGetProperty(root, "peer_route_pairs", out var pairsElement) && pairsElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var pairElement in pairsElement.EnumerateArray())
             {
@@ -185,7 +185,7 @@ public static class EasyTierNetworkSnapshotParser
                 }
 
                 var node = new EasyTierNodeInfo();
-                if (TryGetProperty(routeElement, "peerId", out var peerIdElement))
+                if (TryGetProperty(routeElement, "peer_id", out var peerIdElement))
                 {
                     node.PeerId = ReadUInt32(peerIdElement);
                 }
@@ -193,12 +193,12 @@ public static class EasyTierNetworkSnapshotParser
                 node.Hostname = TryReadString(routeElement, "hostname");
                 node.Version = TryReadString(routeElement, "version");
 
-                if (TryGetProperty(routeElement, "ipv4Addr", out var ipv4Element))
+                if (TryGetProperty(routeElement, "ipv4_addr", out var ipv4Element))
                 {
                     node.VirtualIpv4 = ReadInetText(ipv4Element);
                 }
 
-                if (TryGetProperty(routeElement, "pathLatency", out var latencyElement))
+                if (TryGetProperty(routeElement, "path_latency", out var latencyElement))
                 {
                     node.PathLatencyMs = ReadInt32(latencyElement);
                 }
@@ -209,24 +209,24 @@ public static class EasyTierNetworkSnapshotParser
                     var connection = SelectActiveConnection(peerElement);
                     if (connection is not null)
                     {
-                        if (TryGetProperty(connection.Value, "lossRate", out var lossElement) && lossElement.ValueKind == JsonValueKind.Number)
+                        if (TryGetProperty(connection.Value, "loss_rate", out var lossElement) && lossElement.ValueKind == JsonValueKind.Number)
                         {
                             node.LossRate = lossElement.GetDouble();
                         }
 
                         if (TryGetProperty(connection.Value, "tunnel", out var tunnelElement) && tunnelElement.ValueKind == JsonValueKind.Object)
                         {
-                            node.TunnelType = TryReadString(tunnelElement, "tunnelType");
+                            node.TunnelType = TryReadString(tunnelElement, "tunnel_type");
                         }
 
                         if (TryGetProperty(connection.Value, "stats", out var statsElement) && statsElement.ValueKind == JsonValueKind.Object)
                         {
-                            if (TryGetProperty(statsElement, "rxBytes", out var rxElement))
+                            if (TryGetProperty(statsElement, "rx_bytes", out var rxElement))
                             {
                                 node.RxBytes = ReadUInt64(rxElement);
                             }
 
-                            if (TryGetProperty(statsElement, "txBytes", out var txElement))
+                            if (TryGetProperty(statsElement, "tx_bytes", out var txElement))
                             {
                                 node.TxBytes = ReadUInt64(txElement);
                             }
@@ -244,7 +244,7 @@ public static class EasyTierNetworkSnapshotParser
             foreach (var routeElement in routesElement.EnumerateArray())
             {
                 var route = new EasyTierRouteInfo();
-                if (TryGetProperty(routeElement, "peerId", out var routePeerElement))
+                if (TryGetProperty(routeElement, "peer_id", out var routePeerElement))
                 {
                     route.PeerId = ReadUInt32(routePeerElement);
                 }
@@ -252,12 +252,12 @@ public static class EasyTierNetworkSnapshotParser
                 route.Hostname = TryReadString(routeElement, "hostname");
                 route.Version = TryReadString(routeElement, "version");
 
-                if (TryGetProperty(routeElement, "ipv4Addr", out var routeIpElement))
+                if (TryGetProperty(routeElement, "ipv4_addr", out var routeIpElement))
                 {
                     route.VirtualIpv4 = ReadInetText(routeIpElement);
                 }
 
-                if (TryGetProperty(routeElement, "nextHopPeerId", out var nextHopElement))
+                if (TryGetProperty(routeElement, "next_hop_peer_id", out var nextHopElement))
                 {
                     route.NextHopPeerId = ReadUInt32(nextHopElement);
                 }
@@ -267,7 +267,7 @@ public static class EasyTierNetworkSnapshotParser
                     route.Cost = ReadInt32(costElement);
                 }
 
-                if (TryGetProperty(routeElement, "pathLatency", out var routeLatencyElement))
+                if (TryGetProperty(routeElement, "path_latency", out var routeLatencyElement))
                 {
                     route.PathLatencyMs = ReadInt32(routeLatencyElement);
                 }
@@ -280,29 +280,32 @@ public static class EasyTierNetworkSnapshotParser
     }
 
     /// <summary>
-    /// 按名称读取对象属性；兼容 camelCase 与 snake_case 两种序列化命名。
+    /// 按名称读取对象属性；EasyTier 的 pbjson 配置了 preserve_proto_field_names，输出 snake_case。
     /// </summary>
     /// <param name="element">JSON 对象元素，类型为 JsonElement，取值为任意对象，必填。</param>
-    /// <param name="propertyName">camelCase 属性名，类型为字符串，取值为非空名称，必填。</param>
+    /// <param name="propertyName">snake_case 属性名，类型为字符串，取值为非空名称，必填。</param>
     /// <param name="value">命中的属性元素，类型为 JsonElement，未命中时为默认值。</param>
     /// <returns>是否命中属性，类型为 bool；命中时返回 true。</returns>
     private static bool TryGetProperty(JsonElement element, string propertyName, out JsonElement value)
     {
-        // pbjson 按协议约定输出 camelCase；保留忽略大小写的回退，防止依赖序列化器版本差异。
-        if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(propertyName, out value))
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            value = default;
+            return false;
+        }
+
+        if (element.TryGetProperty(propertyName, out value))
         {
             return true;
         }
 
-        if (element.ValueKind == JsonValueKind.Object)
+        // 去掉下划线后忽略大小写比较，兼容序列化器切换命名风格。
+        foreach (var property in element.EnumerateObject())
         {
-            foreach (var property in element.EnumerateObject())
+            if (string.Equals(property.Name.Replace("_", string.Empty, StringComparison.Ordinal), propertyName.Replace("_", string.Empty, StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
-                {
-                    value = property.Value;
-                    return true;
-                }
+                value = property.Value;
+                return true;
             }
         }
 
@@ -314,7 +317,7 @@ public static class EasyTierNetworkSnapshotParser
     /// 读取一个字符串属性；属性缺失或类型不符时返回空。
     /// </summary>
     /// <param name="element">JSON 对象元素，类型为 JsonElement，取值为任意对象，必填。</param>
-    /// <param name="propertyName">camelCase 属性名，类型为字符串，取值为非空名称，必填。</param>
+    /// <param name="propertyName">snake_case 属性名，类型为字符串，取值为非空名称，必填。</param>
     /// <returns>属性文本，类型为字符串可空值。</returns>
     private static string? TryReadString(JsonElement element, string propertyName)
     {
@@ -379,7 +382,7 @@ public static class EasyTierNetworkSnapshotParser
         if (!TryGetProperty(element, "address", out var addressElement)
             || addressElement.ValueKind != JsonValueKind.Object
             || !TryGetProperty(addressElement, "addr", out var packedElement)
-            || !TryGetProperty(element, "networkLength", out var prefixElement))
+            || !TryGetProperty(element, "network_length", out var prefixElement))
         {
             return null;
         }
@@ -405,7 +408,7 @@ public static class EasyTierNetworkSnapshotParser
         foreach (var connection in connsElement.EnumerateArray())
         {
             // 已关闭连接不作为展示对象。
-            var isClosed = TryGetProperty(connection, "isClosed", out var closedElement) && closedElement.ValueKind == JsonValueKind.True;
+            var isClosed = TryGetProperty(connection, "is_closed", out var closedElement) && closedElement.ValueKind == JsonValueKind.True;
             if (!isClosed)
             {
                 return connection;
