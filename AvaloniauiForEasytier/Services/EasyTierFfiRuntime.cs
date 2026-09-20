@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -226,6 +227,84 @@ public sealed class EasyTierFfiRuntime : IEasyTierRuntime
         }
 
         _operationGate.Dispose();
+    }
+
+    /// <summary>
+    /// 采集当前实例的节点和路由运行快照。
+    /// </summary>
+    /// <returns>网络运行快照，类型为 EasyTierNetworkSnapshot；实例未运行、未上报数据或采集失败时返回 null。</returns>
+    public EasyTierNetworkSnapshot? CollectNetworkSnapshot()
+    {
+        ThrowIfDisposed();
+        var instanceName = GetActiveInstanceName();
+        if (instanceName is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var infos = CollectNetworkInfos();
+
+            // FFI 返回全部实例的信息，仅保留当前活动实例的数据。
+            return infos.TryGetValue(instanceName, out var json)
+                ? EasyTierNetworkSnapshotParser.Parse(instanceName, json)
+                : null;
+        }
+        catch (Exception exception)
+        {
+            Logger.Warn(exception, "采集 EasyTier 网络快照失败：{0}", instanceName);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 调用 FFI 采集全部实例的运行信息。
+    /// </summary>
+    /// <returns>实例名称到运行信息 JSON 的映射，类型为 Dictionary&lt;string, string&gt;。</returns>
+    /// <exception cref="InvalidOperationException">FFI 返回错误时抛出，异常消息为 FFI 错误文本。</exception>
+    private static Dictionary<string, string> CollectNetworkInfos()
+    {
+        const int maxInstanceCount = 64; // 单次采集的实例数量上限，桌面场景远够使用。
+        var pairSize = Marshal.SizeOf<NativeKeyValuePair>();
+        var buffer = Marshal.AllocHGlobal(pairSize * maxInstanceCount);
+        try
+        {
+            var count = EasyTierNative.CollectNetworkInfos(buffer, maxInstanceCount);
+            if (count < 0)
+            {
+                throw new InvalidOperationException(GetErrorMessage() ?? $"采集网络信息失败，返回码：{count}");
+            }
+
+            var result = new Dictionary<string, string>(count, StringComparer.Ordinal);
+            for (var index = 0; index < count; index++)
+            {
+                var pair = Marshal.PtrToStructure<NativeKeyValuePair>(buffer + index * pairSize);
+                try
+                {
+                    var key = Marshal.PtrToStringUTF8(pair.Key);
+                    var value = Marshal.PtrToStringUTF8(pair.Value);
+
+                    // 键值任一为空时跳过该条目，保证字典中只有完整数据。
+                    if (key is not null && value is not null)
+                    {
+                        result[key] = value;
+                    }
+                }
+                finally
+                {
+                    // FFI 通过 CString::into_raw 分配的字符串必须用 free_string 归还。
+                    EasyTierNative.FreeString(pair.Key);
+                    EasyTierNative.FreeString(pair.Value);
+                }
+            }
+
+            return result;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
     }
 
     /// <summary>

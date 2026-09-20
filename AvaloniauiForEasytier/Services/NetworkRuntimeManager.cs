@@ -195,6 +195,22 @@ public sealed class NetworkRuntimeManager : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// 采集指定实例的节点和路由运行快照；调用方应在后台线程执行以避免阻塞界面。
+    /// </summary>
+    /// <param name="instanceName">实例名称，类型为字符串，取值为非空已启动名称，必填。</param>
+    /// <returns>网络运行快照，类型为 EasyTierNetworkSnapshot；实例不存在、未运行或采集失败时返回 null。</returns>
+    public EasyTierNetworkSnapshot? GetNetworkSnapshot(string instanceName)
+    {
+        EasyTierFfiRuntime? runtime;
+        lock (_syncRoot)
+        {
+            _runtimes.TryGetValue(instanceName, out runtime);
+        }
+
+        return runtime?.CollectNetworkSnapshot();
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {

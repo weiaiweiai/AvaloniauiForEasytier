@@ -9,6 +9,7 @@ using AvaloniauiForEasytier.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AvaloniauiForEasytier.Views;
 
@@ -27,6 +28,8 @@ public partial class NetworkView : UserControl
     private readonly NetworkRuntimeManager? _runtimeManager;
     private List<NetworkProfile> _sidebarProfiles = new();
     private NetworkProfile? _selectedProfile;
+    private readonly DispatcherTimer? _detailDataTimer;
+    private bool _isLoadingDetailData; // 标记节点路由快照是否正在采集，防止并发调用 FFI。
 
     /// <summary>初始化设计器使用的网络视图。</summary>
     public NetworkView() { InitializeComponent(); }
@@ -47,7 +50,15 @@ public partial class NetworkView : UserControl
         StartNetworkButton.Click += StartNetworkButton_Click;
         DeleteNetworkButton.Click += DeleteNetworkButton_Click;
         SaveProfileButton.Click += SaveProfileButton_Click;
+        RefreshPeersButton.Click += RefreshDataButton_Click;
+        RefreshRoutesButton.Click += RefreshDataButton_Click;
+        DetailTabControl.SelectionChanged += DetailTabControl_SelectionChanged;
         _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
+
+        // 节点与路由数据按固定周期自动刷新，仅在详情可见且网络运行中时生效。
+        _detailDataTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _detailDataTimer.Tick += DetailDataTimer_Tick;
+        _detailDataTimer.Start();
         ClearSelection();
     }
 
@@ -73,7 +84,7 @@ public partial class NetworkView : UserControl
     }
 
     /// <summary>
-    /// 响应任一网络状态变化并刷新侧边栏状态和详情头部。
+    /// 响应任一网络状态变化并刷新侧边栏状态、详情头部和数据标签页。
     /// </summary>
     /// <param name="instanceName">发生变化的实例名称，类型为字符串，取值为非空名称，必填。</param>
     /// <param name="eventArgs">状态变化参数，类型为 CoreStatusChangedEventArgs，不可为空，必填。</param>
@@ -84,6 +95,9 @@ public partial class NetworkView : UserControl
             // 侧边栏状态点始终刷新；选中网络匹配变化实例时同步详情头部。
             RenderSidebar();
             if (DetailRoot.IsVisible) UpdateDetailHeader();
+
+            // 状态变化可能意味着实例刚启动或已停止，立即刷新数据标签页内容。
+            _ = RefreshDetailDataAsync();
         });
     }
 
@@ -526,6 +540,389 @@ public partial class NetworkView : UserControl
         // 提示当前编辑来源：已保存网络已加载数据库参数，新网络尚未保存。
         ProfileStatusText.Text = profile.Id == 0 ? "新网络尚未保存" : "已加载数据库中的网络参数";
     }
+
+    /// <summary>
+    /// 响应刷新按钮，立即采集节点和路由数据。
+    /// </summary>
+    /// <param name="sender">触发事件的刷新按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private void RefreshDataButton_Click(object? sender, RoutedEventArgs e)
+    {
+        _ = RefreshDetailDataAsync();
+    }
+
+    /// <summary>
+    /// 响应标签页切换，进入节点或路由页时立即刷新数据。
+    /// </summary>
+    /// <param name="sender">触发事件的标签控件，类型为对象，可为空，非必填。</param>
+    /// <param name="e">选择变化参数，类型为 SelectionChangedEventArgs，不可为空，必填。</param>
+    private void DetailTabControl_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        // 配置页不消耗采集开销，只有节点和路由页需要立即刷新。
+        if (DetailTabControl.SelectedIndex is 1 or 2)
+        {
+            _ = RefreshDetailDataAsync();
+        }
+    }
+
+    /// <summary>
+    /// 响应定时器心跳，详情可见时自动刷新节点和路由数据。
+    /// </summary>
+    /// <param name="sender">触发事件的定时器，类型为对象，可为空，非必填。</param>
+    /// <param name="e">事件参数，类型为 EventArgs，不可为空，必填。</param>
+    private void DetailDataTimer_Tick(object? sender, EventArgs e)
+    {
+        // 定时刷新只在详情可见且已选中网络时执行，避免后台空转。
+        if (DetailRoot.IsVisible && _selectedProfile is not null)
+        {
+            _ = RefreshDetailDataAsync();
+        }
+    }
+
+    /// <summary>
+    /// 采集并渲染当前网络的节点和路由数据。
+    /// </summary>
+    /// <returns>异步刷新任务，类型为 Task。</returns>
+    private async Task RefreshDetailDataAsync()
+    {
+        if (_runtimeManager is null)
+        {
+            return;
+        }
+
+        // 未选中网络或网络尚未保存时没有可采集的实例。
+        if (_selectedProfile is null || _selectedProfile.Id == 0)
+        {
+            RenderEmptyDataTabs(_selectedProfile is null ? "未选择网络" : "网络尚未保存，保存并启动后可查看数据");
+            return;
+        }
+
+        var instanceName = _selectedProfile.InstanceName;
+
+        // 只有运行中的实例才能通过 FFI 采集到节点和路由数据。
+        if (_runtimeManager.GetStatus(instanceName) != CoreProcessStatus.Running)
+        {
+            RenderEmptyDataTabs("网络未运行，启动后可查看节点和路由数据");
+            return;
+        }
+
+        // 上一次采集尚未完成时跳过本次刷新，避免并发调用 FFI。
+        if (_isLoadingDetailData)
+        {
+            return;
+        }
+
+        _isLoadingDetailData = true;
+        try
+        {
+            var snapshot = await Task.Run(() => _runtimeManager.GetNetworkSnapshot(instanceName));
+
+            // 采集期间用户可能切换到其他网络，实例名不匹配时放弃渲染。
+            if (_selectedProfile?.InstanceName != instanceName)
+            {
+                return;
+            }
+
+            RenderDetailData(snapshot);
+        }
+        catch (Exception exception)
+        {
+            ApplicationLogging.GetLogger(nameof(NetworkView)).Error(exception, "刷新网络详情数据失败");
+            RenderEmptyDataTabs("读取节点和路由数据失败，请查看日志");
+        }
+        finally
+        {
+            _isLoadingDetailData = false;
+        }
+    }
+
+    /// <summary>
+    /// 渲染一次快照到节点和路由表格。
+    /// </summary>
+    /// <param name="snapshot">网络运行快照，类型为 EasyTierNetworkSnapshot，可为空，非必填。</param>
+    private void RenderDetailData(EasyTierNetworkSnapshot? snapshot)
+    {
+        // 快照缺失说明 FFI 没有上报该实例数据，通常为实例仍在初始化。
+        if (snapshot is null)
+        {
+            RenderEmptyDataTabs("暂无运行数据，实例可能仍在初始化");
+            return;
+        }
+
+        RenderPeerRows(snapshot);
+        RenderRouteRows(snapshot);
+        var updatedText = $"更新于 {DateTime.Now:HH:mm:ss}"; // 数据刷新时间标注。
+        PeersUpdatedText.Text = updatedText;
+        RoutesUpdatedText.Text = updatedText;
+    }
+
+    /// <summary>
+    /// 在节点和路由表格中显示占位说明。
+    /// </summary>
+    /// <param name="reason">占位说明文本，类型为字符串，取值为非空原因描述，必填。</param>
+    private void RenderEmptyDataTabs(string reason)
+    {
+        RenderHintPanel(PeersRowsPanel, reason);
+        RenderHintPanel(RoutesRowsPanel, reason);
+        PeersUpdatedText.Text = string.Empty;
+        RoutesUpdatedText.Text = string.Empty;
+    }
+
+    /// <summary>
+    /// 在指定表格容器中写入占位说明。
+    /// </summary>
+    /// <param name="panel">表格行容器，类型为 StackPanel，不可为空，必填。</param>
+    /// <param name="reason">占位说明文本，类型为字符串，取值为非空原因描述，必填。</param>
+    private static void RenderHintPanel(StackPanel panel, string reason)
+    {
+        panel.Children.Clear();
+        panel.Children.Add(new TextBlock
+        {
+            Classes = { "muted" },
+            Text = reason,
+            FontSize = 12,
+            Margin = new Thickness(0, 12),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+    }
+
+    /// <summary>
+    /// 渲染节点表格的表头和数据行。
+    /// </summary>
+    /// <param name="snapshot">网络运行快照，类型为 EasyTierNetworkSnapshot，不可为空，必填。</param>
+    private void RenderPeerRows(EasyTierNetworkSnapshot snapshot)
+    {
+        PeersRowsPanel.Children.Clear();
+        PeersRowsPanel.Children.Add(BuildPeerHeaderRow());
+
+        // 实例已运行但还没有节点上报时显示空态提示。
+        if (snapshot.Nodes.Count == 0)
+        {
+            RenderHintPanel(PeersRowsPanel, "暂无节点数据");
+            return;
+        }
+
+        foreach (var node in snapshot.Nodes)
+        {
+            PeersRowsPanel.Children.Add(BuildPeerRow(node, snapshot.MyPeerId));
+        }
+    }
+
+    /// <summary>
+    /// 渲染路由表格的表头和数据行。
+    /// </summary>
+    /// <param name="snapshot">网络运行快照，类型为 EasyTierNetworkSnapshot，不可为空，必填。</param>
+    private void RenderRouteRows(EasyTierNetworkSnapshot snapshot)
+    {
+        RoutesRowsPanel.Children.Clear();
+        RoutesRowsPanel.Children.Add(BuildRouteHeaderRow());
+
+        // 实例已运行但还没有路由上报时显示空态提示。
+        if (snapshot.Routes.Count == 0)
+        {
+            RenderHintPanel(RoutesRowsPanel, "暂无路由数据");
+            return;
+        }
+
+        foreach (var route in snapshot.Routes)
+        {
+            RoutesRowsPanel.Children.Add(BuildRouteRow(route, snapshot.MyPeerId));
+        }
+    }
+
+    /// <summary>
+    /// 创建节点表格使用的统一列定义。
+    /// </summary>
+    /// <returns>行网格，类型为 Grid。</returns>
+    private static Grid CreatePeerRowGrid()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(52, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.4, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.2, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(72, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(72, GridUnitType.Pixel)));
+        return grid;
+    }
+
+    /// <summary>
+    /// 创建路由表格使用的统一列定义。
+    /// </summary>
+    /// <returns>行网格，类型为 Grid。</returns>
+    private static Grid CreateRouteRowGrid()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(52, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.4, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.2, GridUnitType.Star)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(80, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(48, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(64, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(76, GridUnitType.Pixel)));
+        return grid;
+    }
+
+    /// <summary>
+    /// 构建节点表格表头行。
+    /// </summary>
+    /// <returns>表头控件，类型为 Border。</returns>
+    private static Border BuildPeerHeaderRow()
+    {
+        var grid = CreatePeerRowGrid();
+        AddCell(grid, 0, "节点ID", "table-header");
+        AddCell(grid, 1, "主机名称", "table-header");
+        AddCell(grid, 2, "虚拟地址", "table-header");
+        AddCell(grid, 3, "延迟", "table-header");
+        AddCell(grid, 4, "丢包率", "table-header");
+        AddCell(grid, 5, "隧道", "table-header");
+        AddCell(grid, 6, "上行", "table-header");
+        AddCell(grid, 7, "下行", "table-header");
+        return BuildHeaderContainer(grid);
+    }
+
+    /// <summary>
+    /// 构建一个节点的数据行。
+    /// </summary>
+    /// <param name="node">节点信息，类型为 EasyTierNodeInfo，不可为空，必填。</param>
+    /// <param name="myPeerId">本机节点编号，类型为 uint，取值为零或正数，必填。</param>
+    /// <returns>数据行控件，类型为 Border。</returns>
+    private static Border BuildPeerRow(EasyTierNodeInfo node, uint myPeerId)
+    {
+        var grid = CreatePeerRowGrid();
+        AddCell(grid, 0, node.PeerId.ToString(), "table-cell-muted");
+        var hostname = string.IsNullOrWhiteSpace(node.Hostname) ? $"节点 {node.PeerId}" : node.Hostname!.Trim();
+
+        // 本机节点在主机名后附加标注，方便与远端节点区分。
+        if (node.PeerId == myPeerId)
+        {
+            hostname += "（本机）";
+        }
+
+        AddCell(grid, 1, hostname, "table-cell");
+        AddCell(grid, 2, node.VirtualIpv4 ?? "--", "table-cell-muted");
+        AddCell(grid, 3, node.PathLatencyMs > 0 ? $"{node.PathLatencyMs} ms" : "--", "table-cell-muted");
+        AddCell(grid, 4, FormatLossRate(node.LossRate), "table-cell-muted");
+        AddCell(grid, 5, string.IsNullOrWhiteSpace(node.TunnelType) ? "--" : node.TunnelType!.ToUpperInvariant(), "table-cell-muted");
+        AddCell(grid, 6, node.TxBytes > 0 ? FormatBytes(node.TxBytes) : "--", "table-cell-muted");
+        AddCell(grid, 7, node.RxBytes > 0 ? FormatBytes(node.RxBytes) : "--", "table-cell-muted");
+        return BuildDataRowContainer(grid);
+    }
+
+    /// <summary>
+    /// 构建路由表格表头行。
+    /// </summary>
+    /// <returns>表头控件，类型为 Border。</returns>
+    private static Border BuildRouteHeaderRow()
+    {
+        var grid = CreateRouteRowGrid();
+        AddCell(grid, 0, "节点ID", "table-header");
+        AddCell(grid, 1, "主机名称", "table-header");
+        AddCell(grid, 2, "虚拟地址", "table-header");
+        AddCell(grid, 3, "下一跳", "table-header");
+        AddCell(grid, 4, "跳数", "table-header");
+        AddCell(grid, 5, "路径延迟", "table-header");
+        AddCell(grid, 6, "版本", "table-header");
+        return BuildHeaderContainer(grid);
+    }
+
+    /// <summary>
+    /// 构建一条路由的数据行。
+    /// </summary>
+    /// <param name="route">路由信息，类型为 EasyTierRouteInfo，不可为空，必填。</param>
+    /// <param name="myPeerId">本机节点编号，类型为 uint，取值为零或正数，必填。</param>
+    /// <returns>数据行控件，类型为 Border。</returns>
+    private static Border BuildRouteRow(EasyTierRouteInfo route, uint myPeerId)
+    {
+        var grid = CreateRouteRowGrid();
+        AddCell(grid, 0, route.PeerId.ToString(), "table-cell-muted");
+        var hostname = string.IsNullOrWhiteSpace(route.Hostname) ? $"节点 {route.PeerId}" : route.Hostname!.Trim();
+
+        // 本机节点在主机名后附加标注，方便与远端节点区分。
+        if (route.PeerId == myPeerId)
+        {
+            hostname += "（本机）";
+        }
+
+        AddCell(grid, 1, hostname, "table-cell");
+        AddCell(grid, 2, route.VirtualIpv4 ?? "--", "table-cell-muted");
+
+        // 下一跳等于目标节点本身时表示直连，否则显示中转节点编号。
+        var nextHopText = route.NextHopPeerId == route.PeerId ? "直连" : $"节点 {route.NextHopPeerId}";
+        AddCell(grid, 3, nextHopText, "table-cell-muted");
+        AddCell(grid, 4, route.Cost.ToString(), "table-cell-muted");
+        AddCell(grid, 5, route.PathLatencyMs > 0 ? $"{route.PathLatencyMs} ms" : "--", "table-cell-muted");
+        AddCell(grid, 6, string.IsNullOrWhiteSpace(route.Version) ? "--" : route.Version!, "table-cell-muted");
+        return BuildDataRowContainer(grid);
+    }
+
+    /// <summary>
+    /// 构建表格表头容器。
+    /// </summary>
+    /// <param name="grid">表头网格，类型为 Grid，不可为空，必填。</param>
+    /// <returns>表头容器，类型为 Border。</returns>
+    private static Border BuildHeaderContainer(Grid grid)
+    {
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#F7F8FA")),
+            CornerRadius = new Avalonia.CornerRadius(5),
+            Padding = new Thickness(10, 7),
+            Child = grid
+        };
+    }
+
+    /// <summary>
+    /// 构建表格数据行容器。
+    /// </summary>
+    /// <param name="grid">数据行网格，类型为 Grid，不可为空，必填。</param>
+    /// <returns>数据行容器，类型为 Border。</returns>
+    private static Border BuildDataRowContainer(Grid grid)
+    {
+        return new Border
+        {
+            BorderBrush = new SolidColorBrush(Color.Parse("#EEF1F5")),
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Padding = new Thickness(10, 8),
+            Child = grid
+        };
+    }
+
+    /// <summary>
+    /// 向行网格添加一个单元格文本。
+    /// </summary>
+    /// <param name="grid">目标行网格，类型为 Grid，不可为空，必填。</param>
+    /// <param name="column">单元格列序号，类型为 int，取值为从零开始的列号，必填。</param>
+    /// <param name="text">单元格文本，类型为字符串，取值为任意文本，必填。</param>
+    /// <param name="styleClass">文本样式类名，类型为字符串，取值为 table-header、table-cell 或 table-cell-muted，必填。</param>
+    private static void AddCell(Grid grid, int column, string text, string styleClass)
+    {
+        var textBlock = new TextBlock { Classes = { styleClass }, Text = text };
+        Grid.SetColumn(textBlock, column);
+        grid.Children.Add(textBlock);
+    }
+
+    /// <summary>
+    /// 把丢包率格式化为百分比文本。
+    /// </summary>
+    /// <param name="lossRate">丢包率，类型为 double 可空值，取值为零到一，可为空。</param>
+    /// <returns>丢包率文本，类型为字符串；未上报时返回占位符。</returns>
+    private static string FormatLossRate(double? lossRate) => lossRate is null ? "--" : $"{lossRate.Value * 100:0.#}%";
+
+    /// <summary>
+    /// 把字节数格式化为可读的流量文本。
+    /// </summary>
+    /// <param name="bytes">字节数，类型为 ulong，取值为零或正数，必填。</param>
+    /// <returns>流量文本，类型为字符串。</returns>
+    private static string FormatBytes(ulong bytes) => bytes switch
+    {
+        >= 1024UL * 1024 * 1024 => $"{bytes / 1024.0 / 1024 / 1024:0.0} GB",
+        >= 1024UL * 1024 => $"{bytes / 1024.0 / 1024:0.0} MB",
+        >= 1024UL => $"{bytes / 1024.0:0.0} KB",
+        _ => $"{bytes} B"
+    };
 
     /// <summary>刷新详情页头部的标题、状态徽标和按钮状态。</summary>
     private void UpdateDetailHeader()

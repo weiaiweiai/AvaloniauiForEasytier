@@ -74,6 +74,25 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Padding" Value="14,7" />
         </Style>
+        <Style Selector="TextBlock.table-header">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#667085" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.table-cell">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#344054" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.table-cell-muted">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#667085" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
     </UserControl.Styles>
 
     <Grid Margin="18,14" ColumnDefinitions="224,12,*">
@@ -186,17 +205,33 @@
                 </TabItem>
 
                 <TabItem Header="节点">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                        <TextBlock FontSize="13" Foreground="#667085" Text="该网络的节点列表将在接入 EasyTier 实时数据后显示。" />
-                        <TextBlock HorizontalAlignment="Center" FontSize="11" Foreground="#98A2B3" Text="当前为界面预留状态" />
-                    </StackPanel>
+                    <Grid Margin="15,12" RowDefinitions="Auto,8,*">
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="section-title" VerticalAlignment="Center" Text="节点列表" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock x:Name="PeersUpdatedText" Classes="muted" FontSize="10" VerticalAlignment="Center" Text="" />
+                                <Button x:Name="RefreshPeersButton" Classes="toolbar outline" Content="刷新" />
+                            </StackPanel>
+                        </Grid>
+                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="PeersRowsPanel" />
+                        </ScrollViewer>
+                    </Grid>
                 </TabItem>
 
                 <TabItem Header="路由">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                        <TextBlock FontSize="13" Foreground="#667085" Text="该网络的路由信息将在接入 EasyTier 实时数据后显示。" />
-                        <TextBlock HorizontalAlignment="Center" FontSize="11" Foreground="#98A2B3" Text="当前为界面预留状态" />
-                    </StackPanel>
+                    <Grid Margin="15,12" RowDefinitions="Auto,8,*">
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="section-title" VerticalAlignment="Center" Text="路由列表" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock x:Name="RoutesUpdatedText" Classes="muted" FontSize="10" VerticalAlignment="Center" Text="" />
+                                <Button x:Name="RefreshRoutesButton" Classes="toolbar outline" Content="刷新" />
+                            </StackPanel>
+                        </Grid>
+                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="RoutesRowsPanel" />
+                        </ScrollViewer>
+                    </Grid>
                 </TabItem>
             </TabControl>
         </Grid>
