@@ -67,6 +67,10 @@ public sealed class NetworkProfile
         // EasyTier 配置结构的键名为 instance_name；缺省时 FFI 会回退为 default，导致多网络实例冲突。
         builder.AppendLine($"instance_name = {QuoteToml(InstanceName)}");
 
+        // EasyTier 的 dhcp 键缺省按 false 处理：未指定静态地址时必须显式启用 DHCP 才能分配虚拟 IP。
+        // 指定了静态地址时禁用 DHCP，避免地址被自动分配覆盖。
+        builder.AppendLine($"dhcp = {(string.IsNullOrWhiteSpace(Ipv4) ? "true" : "false")}");
+
         // 只有用户指定虚拟地址时才关闭 EasyTier 的默认地址选择逻辑。
         if (!string.IsNullOrWhiteSpace(Ipv4))
         {

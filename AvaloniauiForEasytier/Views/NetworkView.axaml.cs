@@ -649,6 +649,20 @@ public partial class NetworkView : UserControl
             return;
         }
 
+        // 实例内部失败时优先展示错误说明，例如 Windows 未以管理员运行导致虚拟网卡创建失败。
+        if (!string.IsNullOrWhiteSpace(snapshot.ErrorMessage))
+        {
+            RenderEmptyDataTabs($"实例错误：{snapshot.ErrorMessage}");
+            return;
+        }
+
+        // FFI 上报实例未运行时提示检查实例状态，避免误以为数据缺失。
+        if (!snapshot.IsRunning)
+        {
+            RenderEmptyDataTabs("实例未在运行，请停止后重新启动网络");
+            return;
+        }
+
         RenderPeerRows(snapshot);
         RenderRouteRows(snapshot);
         var updatedText = $"更新于 {DateTime.Now:HH:mm:ss}"; // 数据刷新时间标注。

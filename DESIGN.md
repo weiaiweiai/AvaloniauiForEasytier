@@ -178,6 +178,7 @@ ApplicationLogging
 | 界面字段 | TOML 字段 | 处理规则 |
 | --- | --- | --- |
 | 实例名称 | `instance_name` | 每个网络必须唯一；缺失时 EasyTier 会回退为 `default`，导致多网络实例冲突 |
+| 虚拟地址分配 | `dhcp` | 未填写虚拟网段时写入 `dhcp = true` 由网络自动分配地址；填写网段时写入 `dhcp = false` 并使用静态地址 |
 | 虚拟网络名称 | `network_identity.network_name` | 以内联表写入，空值时使用 `easytier`；界面中与认证密钥同行展示 |
 | 认证密钥 | `network_identity.network_secret` | 非空时写入内联表；界面中与虚拟网络名称同行展示 |
 | 虚拟网段 | `ipv4` | 非空时写入 |
