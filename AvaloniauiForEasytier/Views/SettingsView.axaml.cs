@@ -25,7 +25,71 @@ public partial class SettingsView : UserControl
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         InitializeComponent();
         SaveSettingsButton.Click += SaveSettingsButton_Click;
+        GeneralCategoryButton.Click += CategoryButton_Click;
+        AppearanceCategoryButton.Click += CategoryButton_Click;
+        NotificationCategoryButton.Click += CategoryButton_Click;
+        ShowCategory("general");
         LoadSettings();
+    }
+
+    /// <summary>
+    /// 响应左侧设置类别点击并切换右侧显示的设置分区。
+    /// </summary>
+    /// <param name="sender">触发事件的类别按钮，类型为对象，可为空，非必填。</param>
+    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
+    private void CategoryButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string categoryKey })
+        {
+            ShowCategory(categoryKey);
+        }
+    }
+
+    /// <summary>
+    /// 按类别标识切换设置分区的可见性、标题和导航选中状态。
+    /// </summary>
+    /// <param name="categoryKey">类别标识，类型为字符串，取值为 general、appearance 或 notification，必填。</param>
+    private void ShowCategory(string categoryKey)
+    {
+        // 每个类别只显示自己的设置分区，避免用户在长列表中查找。
+        GeneralSection.IsVisible = categoryKey == "general";
+        AppearanceSection.IsVisible = categoryKey == "appearance";
+        NotificationSection.IsVisible = categoryKey == "notification";
+
+        (CategoryTitleText.Text, CategoryCaptionText.Text) = categoryKey switch
+        {
+            "appearance" => ("外观设置", "调整主题配色与界面密度。"),
+            "notification" => ("通知设置", "决定网络状态变化时是否提醒以及提醒范围。"),
+            _ => ("常规设置", "控制应用启动与后台驻留行为。")
+        };
+
+        // 尚未生效的说明只在涉及未实现能力的类别下显示。
+        PendingFeatureText.IsVisible = categoryKey != "notification";
+        PendingFeatureText.Text = categoryKey == "appearance"
+            ? "主题和界面密度目前仅保存设置值，动态切换尚未接入。"
+            : "开机启动、托盘驻留和更新检查目前仅保存设置值，实际行为尚未接入。";
+
+        foreach (var button in GetCategoryButtons())
+        {
+            button.Classes.Remove("selected");
+        }
+
+        var selectedButton = categoryKey switch
+        {
+            "appearance" => AppearanceCategoryButton,
+            "notification" => NotificationCategoryButton,
+            _ => GeneralCategoryButton
+        };
+        selectedButton.Classes.Add("selected");
+    }
+
+    /// <summary>
+    /// 获取全部设置类别按钮。
+    /// </summary>
+    /// <returns>类别按钮数组，类型为 Button 数组。</returns>
+    private Button[] GetCategoryButtons()
+    {
+        return new[] { GeneralCategoryButton, AppearanceCategoryButton, NotificationCategoryButton };
     }
 
     /// <summary>

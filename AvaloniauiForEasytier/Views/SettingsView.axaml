@@ -1,54 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AvaloniauiForEasytier.Views.SettingsView">
-    <UserControl.Styles>
-        <Style Selector="TextBlock.page-title">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="TextBlock.section-title">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#667085" />
-        </Style>
-        <Style Selector="TextBlock.field-label">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#475467" />
-        </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#D9DEE6" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-        </Style>
-        <Style Selector="Button.toolbar">
-            <Setter Property="Height" Value="31" />
-            <Setter Property="Padding" Value="11,5" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="Button.accent">
-            <Setter Property="Background" Value="#0F9F8F" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.outline">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="Foreground" Value="#344054" />
-            <Setter Property="BorderBrush" Value="#C7CED8" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-    </UserControl.Styles>
 
-    <Grid Margin="18,14" RowDefinitions="38,16,*">
+    <Grid Margin="18,15,18,16" RowDefinitions="Auto,15,*">
+        <!-- 页头：标题与保存命令 -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Classes="page-title" Text="设置" />
-                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="调整控制台、核心服务与诊断行为" />
+                <TextBlock Classes="page-caption" Text="调整控制台、核心服务与诊断行为" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                 <TextBlock x:Name="SettingsStatusText" Classes="muted" VerticalAlignment="Center" FontSize="11" Text="" />
@@ -56,77 +15,93 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="190,12,*">
+        <Grid Grid.Row="2" ColumnDefinitions="182,12,*">
+            <!-- 设置类别导航 -->
             <Border Grid.Column="0" Classes="panel">
-                <StackPanel Margin="7,9" Spacing="2">
-                    <TextBlock Margin="8,4,0,7" FontSize="10" FontWeight="SemiBold" Foreground="#98A2B3" Text="设置类别" />
-                    <Button Background="#E8F7F4" Foreground="#0F766E" HorizontalContentAlignment="Left" Padding="10,8" CornerRadius="5" Content="常规" />
-                    <Button Background="Transparent" Foreground="#475467" HorizontalContentAlignment="Left" Padding="10,8" CornerRadius="5" Content="核心服务" />
-                    <Button Background="Transparent" Foreground="#475467" HorizontalContentAlignment="Left" Padding="10,8" CornerRadius="5" Content="网络行为" />
-                    <Button Background="Transparent" Foreground="#475467" HorizontalContentAlignment="Left" Padding="10,8" CornerRadius="5" Content="日志与诊断" />
-                    <Button Background="Transparent" Foreground="#475467" HorizontalContentAlignment="Left" Padding="10,8" CornerRadius="5" Content="关于" />
+                <StackPanel Margin="8,10" Spacing="2">
+                    <TextBlock Margin="9,2,0,6" Classes="hint" FontWeight="SemiBold" Text="设置类别" />
+                    <Button x:Name="GeneralCategoryButton" Classes="list-item selected" HorizontalContentAlignment="Left" Tag="general" Content="常规" />
+                    <Button x:Name="AppearanceCategoryButton" Classes="list-item" HorizontalContentAlignment="Left" Tag="appearance" Content="外观" />
+                    <Button x:Name="NotificationCategoryButton" Classes="list-item" HorizontalContentAlignment="Left" Tag="notification" Content="通知" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="2" Classes="panel">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="20,16,20,20" Spacing="14">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="section-title" FontSize="15" Text="常规设置" />
-                            <TextBlock Classes="muted" FontSize="11" Text="控制应用启动、外观和通知行为。" />
+                    <StackPanel Margin="20,17,20,20" Spacing="13">
+                        <StackPanel Spacing="3">
+                            <TextBlock x:Name="CategoryTitleText" Classes="group-title" FontSize="15" Text="常规设置" />
+                            <TextBlock x:Name="CategoryCaptionText" Classes="muted" FontSize="11" Text="控制应用启动与后台驻留行为。" />
                         </StackPanel>
 
-                        <Border Classes="panel" Background="#FBFCFD" Padding="15">
+                        <!-- 常规：应用启动与后台行为 -->
+                        <Border x:Name="GeneralSection" Classes="panel subtle" Padding="16,14">
                             <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="13">
                                 <TextBlock Grid.ColumnSpan="2" Classes="section-title" Text="应用行为" />
-                                <StackPanel Grid.Row="1" Spacing="3">
+                                <StackPanel Grid.Row="1" Spacing="3" VerticalAlignment="Center">
                                     <TextBlock Classes="field-label" Text="开机启动" />
-                                    <TextBlock Classes="muted" FontSize="10" Text="登录系统后自动启动控制台" />
+                                    <TextBlock Classes="hint" Text="登录系统后自动启动控制台" />
                                 </StackPanel>
-                                <ToggleSwitch x:Name="LaunchAtLoginToggle" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" OffContent="关闭" OnContent="开启" />
-                                <StackPanel Grid.Row="2" Spacing="3">
+                                <ToggleSwitch x:Name="LaunchAtLoginToggle" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" OffContent="关闭" OnContent="开启" />
+                                <StackPanel Grid.Row="2" Spacing="3" VerticalAlignment="Center">
                                     <TextBlock Classes="field-label" Text="最小化到托盘" />
-                                    <TextBlock Classes="muted" FontSize="10" Text="关闭窗口时继续在后台运行" />
+                                    <TextBlock Classes="hint" Text="关闭窗口时继续在后台运行" />
                                 </StackPanel>
-                                <ToggleSwitch x:Name="MinimizeToTrayToggle" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" IsChecked="True" OffContent="关闭" OnContent="开启" />
-                                <StackPanel Grid.Row="3" Spacing="3">
+                                <ToggleSwitch x:Name="MinimizeToTrayToggle" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" OffContent="关闭" OnContent="开启" />
+                                <StackPanel Grid.Row="3" Spacing="3" VerticalAlignment="Center">
                                     <TextBlock Classes="field-label" Text="启动后自动检查更新" />
-                                    <TextBlock Classes="muted" FontSize="10" Text="仅检查应用版本，不会自动安装" />
+                                    <TextBlock Classes="hint" Text="仅检查应用版本，不会自动安装" />
                                 </StackPanel>
-                                <ToggleSwitch x:Name="CheckUpdatesToggle" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" IsChecked="True" OffContent="关闭" OnContent="开启" />
+                                <ToggleSwitch x:Name="CheckUpdatesToggle" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" OffContent="关闭" OnContent="开启" />
                             </Grid>
                         </Border>
 
-                        <Border Classes="panel" Background="#FBFCFD" Padding="15">
-                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,180" RowSpacing="13">
+                        <!-- 外观：主题与界面密度 -->
+                        <Border x:Name="AppearanceSection" Classes="panel subtle" Padding="16,14">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,176" RowSpacing="13">
                                 <TextBlock Grid.ColumnSpan="2" Classes="section-title" Text="外观" />
-                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="主题" />
-                                <ComboBox x:Name="ThemeModeComboBox" Grid.Row="1" Grid.Column="1" Height="30" SelectedIndex="0">
+                                <StackPanel Grid.Row="1" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Classes="field-label" Text="主题" />
+                                    <TextBlock Classes="hint" Text="保存后在下次启动生效" />
+                                </StackPanel>
+                                <ComboBox x:Name="ThemeModeComboBox" Grid.Row="1" Grid.Column="1" Classes="form" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
                                     <ComboBoxItem Content="跟随系统" />
                                     <ComboBoxItem Content="浅色" />
                                     <ComboBoxItem Content="深色" />
                                 </ComboBox>
-                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="界面密度" />
-                                <ComboBox x:Name="UiDensityComboBox" Grid.Row="2" Grid.Column="1" Height="30" SelectedIndex="0">
+                                <StackPanel Grid.Row="2" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Classes="field-label" Text="界面密度" />
+                                    <TextBlock Classes="hint" Text="紧凑模式减小行高和间距" />
+                                </StackPanel>
+                                <ComboBox x:Name="UiDensityComboBox" Grid.Row="2" Grid.Column="1" Classes="form" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
                                     <ComboBoxItem Content="舒适" />
                                     <ComboBoxItem Content="紧凑" />
                                 </ComboBox>
                             </Grid>
                         </Border>
 
-                        <Border Classes="panel" Background="#FBFCFD" Padding="15">
-                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,180" RowSpacing="13">
+                        <!-- 通知：状态变化提醒与级别 -->
+                        <Border x:Name="NotificationSection" Classes="panel subtle" Padding="16,14">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,176" RowSpacing="13">
                                 <TextBlock Grid.ColumnSpan="2" Classes="section-title" Text="通知" />
-                                <TextBlock Grid.Row="1" Classes="field-label" VerticalAlignment="Center" Text="服务状态变化通知" />
-                                <ToggleSwitch x:Name="StatusNotificationToggle" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" IsChecked="True" OffContent="关闭" OnContent="开启" />
-                                <TextBlock Grid.Row="2" Classes="field-label" VerticalAlignment="Center" Text="通知级别" />
-                                <ComboBox x:Name="NotificationLevelComboBox" Grid.Row="2" Grid.Column="1" Height="30" SelectedIndex="0">
+                                <StackPanel Grid.Row="1" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Classes="field-label" Text="服务状态变化通知" />
+                                    <TextBlock Classes="hint" Text="网络启动、停止或异常时提醒" />
+                                </StackPanel>
+                                <ToggleSwitch x:Name="StatusNotificationToggle" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" OffContent="关闭" OnContent="开启" />
+                                <StackPanel Grid.Row="2" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Classes="field-label" Text="通知级别" />
+                                    <TextBlock Classes="hint" Text="决定哪些事件触发通知" />
+                                </StackPanel>
+                                <ComboBox x:Name="NotificationLevelComboBox" Grid.Row="2" Grid.Column="1" Classes="form" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
                                     <ComboBoxItem Content="仅错误" />
                                     <ComboBoxItem Content="警告及错误" />
                                     <ComboBoxItem Content="全部事件" />
                                 </ComboBox>
                             </Grid>
                         </Border>
+
+                        <TextBlock x:Name="PendingFeatureText" Classes="hint" TextWrapping="Wrap" Text="开机启动、托盘驻留、更新检查、动态主题和系统通知目前仅保存设置值，实际行为尚未接入。" />
                     </StackPanel>
                 </ScrollViewer>
             </Border>
