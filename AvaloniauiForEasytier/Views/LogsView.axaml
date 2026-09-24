@@ -2,106 +2,97 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AvaloniauiForEasytier.Views.LogsView">
     <UserControl.Styles>
-        <Style Selector="TextBlock.page-title">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
+        <!-- 日志行：整行可点击以在右侧查看详情 -->
+        <Style Selector="Border.log-row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="7,2" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
-        <Style Selector="TextBlock.section-title">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
+        <Style Selector="Border.log-row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AppRowHoverBrush}" />
         </Style>
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#667085" />
-        </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#D9DEE6" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-        </Style>
-        <Style Selector="Button.toolbar">
-            <Setter Property="Height" Value="31" />
-            <Setter Property="Padding" Value="11,5" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="Button.outline">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="Foreground" Value="#344054" />
-            <Setter Property="BorderBrush" Value="#C7CED8" />
-            <Setter Property="BorderThickness" Value="1" />
+        <Style Selector="Border.log-row.selected">
+            <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
         </Style>
     </UserControl.Styles>
 
-    <Grid Margin="18,14" RowDefinitions="38,16,*">
+    <Grid Margin="18,15,18,16" RowDefinitions="Auto,15,*">
+        <!-- 页头：标题与输出窗口命令 -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Classes="page-title" Text="系统日志" />
-                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="查看全部网络实例的输出与错误信息" />
+                <TextBlock Classes="page-caption" Text="查看全部网络实例的实时输出" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7">
-                <Button Classes="toolbar outline" Content="暂停滚动" />
-                <Button Classes="toolbar outline" Content="导出日志" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <Button x:Name="PauseScrollButton" Classes="toolbar outline" MinWidth="84" Content="暂停滚动" />
+                <Button x:Name="ExportLogsButton" Classes="toolbar outline" Content="导出日志" />
                 <Button x:Name="ClearLogsButton" Classes="toolbar outline" Content="清空" />
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2" RowDefinitions="42,*,30">
-            <Border Grid.Row="0" Classes="panel" CornerRadius="6,6,0,0">
-                <Grid Margin="10,0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
-                    <TextBlock Classes="section-title" VerticalAlignment="Center" Text="输出窗口" />
-                    <Border Grid.Column="1" Width="1" Height="17" Margin="11,0" Background="#D9DEE6" />
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="7">
-                        <Ellipse Width="7" Height="7" Fill="#98A2B3" />
-                        <TextBlock x:Name="LogServiceStatusText" Classes="muted" FontSize="11" Text="服务未运行" />
-                    </StackPanel>
-                    <ComboBox Grid.Column="4" Width="110" Height="27" Margin="0,0,7,0" SelectedIndex="0" FontSize="11">
-                        <ComboBoxItem Content="全部级别" />
-                        <ComboBoxItem Content="信息" />
-                        <ComboBoxItem Content="警告" />
-                        <ComboBoxItem Content="错误" />
-                    </ComboBox>
-                    <TextBox Grid.Column="5" Width="150" Height="27" PlaceholderText="筛选文本" FontSize="11" />
-                </Grid>
-            </Border>
-            <Grid Grid.Row="1" ColumnDefinitions="*,12,270">
-                <Border Grid.Column="0" Classes="panel" CornerRadius="0,0,0,6">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="LogOutputPanel" Margin="12,10" Spacing="5">
-                            <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#667085" Text="[--:--:--.---] INFO  EasyTier Core 等待启动" />
-                            <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#667085" Text="[--:--:--.---] INFO  当前没有活动网络配置" />
-                            <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#667085" Text="[--:--:--.---] INFO  输出窗口已准备就绪" />
-                            <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#98A2B3" Text="" />
-                            <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#98A2B3" Text="等待新的输出..." />
+        <Border Grid.Row="2" Classes="panel" ClipToBounds="True">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <!-- 输出窗口工具条：运行状态、级别筛选和文本筛选 -->
+                <Border Grid.Row="0" Classes="panel-header" MinHeight="46" Padding="11,0">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+                        <TextBlock Classes="section-title" VerticalAlignment="Center" Text="输出窗口" />
+                        <Border Grid.Column="1" Classes="status-bar-divider" Height="16" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="7">
+                            <Ellipse x:Name="LogServiceStatusIndicator" Width="7" Height="7" VerticalAlignment="Center" Fill="{DynamicResource AppPlaceholderBrush}" />
+                            <TextBlock x:Name="LogServiceStatusText" Classes="muted" FontSize="11" Text="网络未运行" />
                         </StackPanel>
-                    </ScrollViewer>
+                        <ComboBox x:Name="LogLevelComboBox" Grid.Column="4" Classes="form" Width="106" Margin="0,0,7,0" VerticalAlignment="Center" SelectedIndex="0">
+                            <ComboBoxItem Content="全部级别" />
+                            <ComboBoxItem Content="信息" />
+                            <ComboBoxItem Content="系统" />
+                            <ComboBoxItem Content="错误" />
+                        </ComboBox>
+                        <TextBox x:Name="LogFilterTextBox" Grid.Column="5" Classes="form" Width="168" VerticalAlignment="Center" PlaceholderText="筛选文本" />
+                    </Grid>
                 </Border>
-                <Border Grid.Column="2" Classes="panel" CornerRadius="0,0,6,0">
-                    <Grid RowDefinitions="42,*">
-                        <Border Grid.Row="0" Padding="13,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
+
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,268">
+                    <ScrollViewer x:Name="LogScrollViewer" Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="LogOutputPanel" Margin="6,8" />
+                    </ScrollViewer>
+
+                    <Border Grid.Column="1" Width="1" Background="{DynamicResource AppOutlineBrush}" />
+
+                    <!-- 事件详情：展示当前选中日志行的完整内容 -->
+                    <Grid Grid.Column="2" RowDefinitions="Auto,*">
+                        <Border Grid.Row="0" Classes="panel-header" Background="Transparent" MinHeight="38" Padding="14,0">
                             <TextBlock Classes="section-title" VerticalAlignment="Center" Text="事件详情" />
                         </Border>
-                        <StackPanel Grid.Row="1" Margin="13" Spacing="12">
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="muted" FontSize="10" Text="选中的日志" />
-                                <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#344054" Text="暂无选择" />
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="14,12" Spacing="11">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="hint" Text="日志内容" />
+                                    <TextBlock x:Name="DetailMessageText" Classes="mono" FontSize="11" Foreground="{DynamicResource AppTextStrongBrush}" TextWrapping="Wrap" Text="未选择日志行" />
+                                </StackPanel>
+                                <Border Height="1" Background="{DynamicResource AppOutlineSubtleBrush}" />
+                                <Grid ColumnDefinitions="56,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                                    <TextBlock Classes="muted" FontSize="11" Text="级别" />
+                                    <TextBlock x:Name="DetailLevelText" Grid.Column="1" FontSize="11" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                                    <TextBlock Grid.Row="1" Classes="muted" FontSize="11" Text="时间" />
+                                    <TextBlock x:Name="DetailTimeText" Grid.Row="1" Grid.Column="1" Classes="mono" FontSize="11" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                                    <TextBlock Grid.Row="2" Classes="muted" FontSize="11" Text="来源" />
+                                    <TextBlock x:Name="DetailSourceText" Grid.Row="2" Grid.Column="1" FontSize="11" Foreground="{DynamicResource AppTextStrongBrush}" TextWrapping="Wrap" Text="--" />
+                                </Grid>
                             </StackPanel>
-                            <Border Height="1" Background="#E5E7EB" />
-                            <Grid ColumnDefinitions="76,*" RowDefinitions="25,25,25,25">
-                                <TextBlock Grid.Row="0" Classes="muted" FontSize="11" VerticalAlignment="Center" Text="级别" /><TextBlock Grid.Row="0" Grid.Column="1" FontSize="11" VerticalAlignment="Center" Foreground="#344054" Text="--" />
-                                <TextBlock Grid.Row="1" Classes="muted" FontSize="11" VerticalAlignment="Center" Text="时间" /><TextBlock Grid.Row="1" Grid.Column="1" FontSize="11" VerticalAlignment="Center" Foreground="#344054" Text="--" />
-                                <TextBlock Grid.Row="2" Classes="muted" FontSize="11" VerticalAlignment="Center" Text="来源" /><TextBlock Grid.Row="2" Grid.Column="1" FontSize="11" VerticalAlignment="Center" Foreground="#344054" Text="--" />
-                                <TextBlock Grid.Row="3" Classes="muted" FontSize="11" VerticalAlignment="Center" Text="线程" /><TextBlock Grid.Row="3" Grid.Column="1" FontSize="11" VerticalAlignment="Center" Foreground="#344054" Text="--" />
-                            </Grid>
-                        </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+
+                <!-- 底部统计条：级别计数与滚动状态 -->
+                <Border Grid.Row="2" Padding="11,0" MinHeight="28" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppOutlineBrush}" BorderThickness="0,1,0,0">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock x:Name="LogCountsText" Classes="status-bar-text" FontSize="10" Text="信息 0   系统 0   错误 0" />
+                        <TextBlock x:Name="LogFilterSummaryText" Grid.Column="1" Classes="status-bar-text" FontSize="10" HorizontalAlignment="Center" Text="" />
+                        <TextBlock x:Name="AutoScrollStateText" Grid.Column="2" Classes="status-bar-text" FontSize="10" Text="自动滚动：开启" />
                     </Grid>
                 </Border>
             </Grid>
-            <Border Grid.Row="2" Padding="10,0" Background="#F7F8FA" BorderBrush="#D9DEE6" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6">
-                <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="muted" VerticalAlignment="Center" FontSize="10" Text="日志级别：信息 0   警告 0   错误 0" /><TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center" FontSize="10" Text="自动滚动：关闭" /></Grid>
-            </Border>
-        </Grid>
+        </Border>
     </Grid>
 </UserControl>
