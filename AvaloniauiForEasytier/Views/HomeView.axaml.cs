@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -25,6 +25,8 @@ public partial class HomeView : UserControl
     private static readonly IBrush FailedBrush = new SolidColorBrush(Color.Parse("#F04438"));
     private static readonly IBrush StoppedBrush = new SolidColorBrush(Color.Parse("#98A2B3"));
     private static readonly IBrush MessageBrush = new SolidColorBrush(Color.Parse("#475467"));
+    private static readonly IBrush StrongTextBrush = new SolidColorBrush(Color.Parse("#344054"));
+    private static readonly IBrush TitleTextBrush = new SolidColorBrush(Color.Parse("#17212F"));
 
     private readonly NetworkProfileRepository? _repository;
     private readonly NetworkRuntimeManager? _runtimeManager;
@@ -127,11 +129,12 @@ public partial class HomeView : UserControl
     /// <summary>
     /// 响应网络快照行点击并打开对应网络详情。
     /// </summary>
-    /// <param name="sender">触发事件的快照行按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void SnapshotRowButton_Click(object? sender, RoutedEventArgs e)
+    /// <param name="sender">触发事件的快照行容器，类型为对象，可为空，非必填。</param>
+    /// <param name="e">指针按下事件参数，类型为 PointerPressedEventArgs，不可为空，必填。</param>
+    private void SnapshotRow_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Button { Tag: long profileId })
+        // 只响应鼠标左键，避免右键或中键误触发页面跳转。
+        if (sender is Border { Tag: long profileId } && e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)
         {
             _openNetworkDetail?.Invoke(profileId);
         }
@@ -149,6 +152,9 @@ public partial class HomeView : UserControl
         ServiceStatusValueText.Text = runningCount > 0 ? "运行中" : "未运行";
         ServiceStatusDescriptionText.Text = $"运行中 {runningCount} / {_profiles.Count} 个网络";
         SummaryStatusIndicator.Fill = runningCount > 0 ? RunningBrush : StoppedBrush;
+
+        // 运行中的网络数用强调色区分，停止状态保持常规标题色，避免误读为异常。
+        ServiceStatusValueText.Foreground = runningCount > 0 ? RunningBrush : TitleTextBrush;
         NetworkTotalValueText.Text = _profiles.Count.ToString();
         AutoStartValueText.Text = autoStartCount.ToString();
         UpdateBatchButtons();
@@ -156,14 +162,7 @@ public partial class HomeView : UserControl
         NetworkSnapshotPanel.Children.Clear();
         if (_profiles.Count == 0)
         {
-            var hint = new TextBlock
-            {
-                Classes = { "muted" },
-                Text = "暂无网络，请在“网络”页新建网络",
-                FontSize = 12,
-                Margin = new Thickness(4, 8)
-            };
-            NetworkSnapshotPanel.Children.Add(hint);
+            NetworkSnapshotPanel.Children.Add(BuildSnapshotEmptyState());
             return;
         }
 
@@ -171,6 +170,24 @@ public partial class HomeView : UserControl
         {
             NetworkSnapshotPanel.Children.Add(CreateSnapshotRow(profile, _runtimeManager.GetStatus(profile.InstanceName)));
         }
+    }
+
+    /// <summary>
+    /// 构建没有已保存网络时的空状态引导区。
+    /// </summary>
+    /// <returns>空状态控件，类型为 StackPanel。</returns>
+    private static StackPanel BuildSnapshotEmptyState()
+    {
+        var panel = new StackPanel
+        {
+            Spacing = 5,
+            Margin = new Thickness(0, 26),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        panel.Children.Add(new TextBlock { Classes = { "empty-title" }, Text = "还没有保存任何网络" });
+        panel.Children.Add(new TextBlock { Classes = { "empty-caption" }, Text = "在左侧“网络”页新建网络后可在此查看运行状态" });
+        return panel;
     }
 
     /// <summary>刷新批量启停按钮的可用状态。</summary>
@@ -187,16 +204,17 @@ public partial class HomeView : UserControl
     /// </summary>
     /// <param name="profile">网络配置，类型为 NetworkProfile，不可为空，必填。</param>
     /// <param name="status">该网络当前运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
-    /// <returns>快照行控件，类型为 Button。</returns>
-    private Button CreateSnapshotRow(NetworkProfile profile, CoreProcessStatus status)
+    /// <returns>快照行控件，类型为 Border。</returns>
+    private Border CreateSnapshotRow(NetworkProfile profile, CoreProcessStatus status)
     {
-        var rowButton = new Button
+        // 使用 Border 而非 Button 承载行内容：Button 模板会按内容宽度收缩，导致列无法与表头对齐。
+        var rowButton = new Border
         {
-            Classes = { "snapshot-row" },
+            Classes = { "clickable-row" },
             Tag = profile.Id,
-            Margin = new Thickness(0, 0, 0, 4)
+            Margin = new Thickness(0, 0, 0, 1)
         };
-        rowButton.Click += SnapshotRowButton_Click;
+        rowButton.PointerPressed += SnapshotRow_PointerPressed;
 
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1.6, GridUnitType.Star)));
@@ -209,7 +227,7 @@ public partial class HomeView : UserControl
             Text = profile.ProfileName,
             FontSize = 12,
             FontWeight = FontWeight.Medium,
-            Foreground = new SolidColorBrush(Color.Parse("#344054")),
+            Foreground = StrongTextBrush,
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
@@ -228,29 +246,9 @@ public partial class HomeView : UserControl
         Grid.SetColumn(subnetText, 1);
         grid.Children.Add(subnetText);
 
-        var statusBrush = GetStatusBrush(status);
-        var statusPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 7,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        statusPanel.Children.Add(new Ellipse
-        {
-            Width = 8,
-            Height = 8,
-            VerticalAlignment = VerticalAlignment.Center,
-            Fill = statusBrush
-        });
-        statusPanel.Children.Add(new TextBlock
-        {
-            Text = GetStatusText(status),
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = statusBrush
-        });
-        Grid.SetColumn(statusPanel, 2);
-        grid.Children.Add(statusPanel);
+        var statusBadge = BuildStatusBadge(status);
+        Grid.SetColumn(statusBadge, 2);
+        grid.Children.Add(statusBadge);
 
         // 行尾箭头提示该行可以进入网络详情。
         var chevron = new TextBlock
@@ -263,8 +261,38 @@ public partial class HomeView : UserControl
         Grid.SetColumn(chevron, 3);
         grid.Children.Add(chevron);
 
-        rowButton.Content = grid;
+        rowButton.Child = grid;
         return rowButton;
+    }
+
+    /// <summary>
+    /// 构建带状态色的运行状态徽标。
+    /// </summary>
+    /// <param name="status">运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
+    /// <returns>状态徽标控件，类型为 Border。</returns>
+    private static Border BuildStatusBadge(CoreProcessStatus status)
+    {
+        var badge = new Border
+        {
+            Classes = { "badge" },
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+
+        // 徽标底色按状态切换：运行为绿色，启停过程为橙色，异常为红色，停止保持中性色。
+        var variantClass = status switch
+        {
+            CoreProcessStatus.Running => "running",
+            CoreProcessStatus.Starting or CoreProcessStatus.Stopping => "warning",
+            CoreProcessStatus.Failed => "danger",
+            _ => null
+        };
+        if (variantClass is not null)
+        {
+            badge.Classes.Add(variantClass);
+        }
+
+        badge.Child = new TextBlock { Text = GetStatusText(status) };
+        return badge;
     }
 
     /// <summary>
@@ -285,10 +313,13 @@ public partial class HomeView : UserControl
         }
 
         var row = new Grid();
-        row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(62, GridUnitType.Pixel)));
+        row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(64, GridUnitType.Pixel)));
         row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+
+        // 时间列使用等宽字体，使多行输出的时间戳纵向对齐。
         var timeText = new TextBlock
         {
+            Classes = { "mono" },
             Text = eventArgs.Timestamp.LocalDateTime.ToString("HH:mm:ss"),
             FontSize = 11,
             Foreground = StoppedBrush,

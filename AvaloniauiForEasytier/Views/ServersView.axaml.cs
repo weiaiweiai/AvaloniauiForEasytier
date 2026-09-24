@@ -46,14 +46,15 @@ public partial class ServersView : UserControl
         ServerRowsPanel.Children.Clear();
         if (_endpoints.Count == 0)
         {
-            var hint = new TextBlock
+            var empty = new StackPanel
             {
-                Classes = { "muted" },
-                Text = "暂无服务器，点击右上角“添加服务器”新增入口节点地址",
-                FontSize = 12,
-                Margin = new Thickness(0, 12)
+                Spacing = 5,
+                Margin = new Thickness(0, 34),
+                HorizontalAlignment = HorizontalAlignment.Center
             };
-            ServerRowsPanel.Children.Add(hint);
+            empty.Children.Add(new TextBlock { Classes = { "empty-title" }, Text = "地址簿还没有服务器" });
+            empty.Children.Add(new TextBlock { Classes = { "empty-caption" }, Text = "点击右上角“添加服务器”新增入口节点地址" });
+            ServerRowsPanel.Children.Add(empty);
             return;
         }
 
@@ -73,8 +74,9 @@ public partial class ServersView : UserControl
     {
         var row = new Border
         {
+            Classes = { "table-row" },
             MinHeight = 44,
-            BorderBrush = new SolidColorBrush(Color.Parse("#EEF1F5")),
+            Padding = new Thickness(14, 8),
             BorderThickness = isLastRow ? new Thickness(0) : new Thickness(0, 0, 0, 1)
         };
 
@@ -82,19 +84,20 @@ public partial class ServersView : UserControl
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(200, GridUnitType.Pixel)));
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(2, GridUnitType.Star)));
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(150, GridUnitType.Pixel)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(130, GridUnitType.Pixel)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(124, GridUnitType.Pixel)));
 
         var nameText = new TextBlock
         {
-            Classes = { "cell" },
+            Classes = { "table-cell" },
             Text = endpoint.Name,
             FontWeight = FontWeight.Medium
         };
         grid.Children.Add(nameText);
 
+        // 节点地址使用等宽字体，便于逐字符核对协议、主机和端口。
         var addressText = new TextBlock
         {
-            Classes = { "cell" },
+            Classes = { "table-cell", "mono" },
             Text = endpoint.Address
         };
         Grid.SetColumn(addressText, 1);
@@ -102,7 +105,7 @@ public partial class ServersView : UserControl
 
         var createdText = new TextBlock
         {
-            Classes = { "cell-muted" },
+            Classes = { "table-cell-muted" },
             Text = endpoint.CreatedAt.ToString("yyyy-MM-dd HH:mm")
         };
         Grid.SetColumn(createdText, 2);
@@ -118,6 +121,7 @@ public partial class ServersView : UserControl
         editButton.Classes.Add("outline");
         editButton.Click += ServerRowEditButton_Click;
 
+        // 删除是不可逆操作，使用危险样式与编辑按钮区分。
         var deleteButton = new Button
         {
             Content = "删除",
@@ -125,7 +129,7 @@ public partial class ServersView : UserControl
             VerticalAlignment = VerticalAlignment.Center
         };
         deleteButton.Classes.Add("row-action");
-        deleteButton.Classes.Add("outline");
+        deleteButton.Classes.Add("danger");
         deleteButton.Click += ServerRowDeleteButton_Click;
 
         var actionPanel = new StackPanel

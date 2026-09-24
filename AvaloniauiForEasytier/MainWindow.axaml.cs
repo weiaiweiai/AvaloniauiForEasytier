@@ -42,7 +42,7 @@ public partial class MainWindow : SukiWindow
         _serversView = new ServersView(_serverRepository);
         _logsView = new LogsView(_runtimeManager);
         _settingsView = new SettingsView(_settingsRepository);
-        _aboutView = new AboutView();
+        _aboutView = new AboutView(_runtimeManager);
         InitializeComponent();
         RegisterUiEvents();
         _runtimeManager.StatusChanged += RuntimeManager_StatusChanged;
@@ -81,7 +81,10 @@ public partial class MainWindow : SukiWindow
     private void ApplySidebarMode()
     {
         const double expandedWidth = 184; // 展开状态的侧边栏宽度（像素）。
-        const double collapsedWidth = 84; // 收起状态的侧边栏宽度（像素），仅容纳图标。
+        const double collapsedWidth = 62; // 收起状态的侧边栏宽度（像素），仅容纳居中图标。
+
+        // 收起时放开列的最小宽度限制，否则固定宽度会被 MinWidth 顶回展开尺寸。
+        MainGrid.ColumnDefinitions[0].MinWidth = _isSidebarCollapsed ? collapsedWidth : 120;
         MainGrid.ColumnDefinitions[0].Width = new GridLength(_isSidebarCollapsed ? collapsedWidth : expandedWidth, GridUnitType.Pixel);
 
         // 收起时隐藏标题文字、分组标题和底部 Core 卡片，仅保留图标和收起按钮。
@@ -91,7 +94,7 @@ public partial class MainWindow : SukiWindow
         CoreInfoCard.IsVisible = !_isSidebarCollapsed;
 
         // 收起时隐藏分隔条，避免用户把仅图标侧边栏拖回宽布局。
-        MainGrid.ColumnDefinitions[1].Width = new GridLength(_isSidebarCollapsed ? 0 : 5, GridUnitType.Pixel);
+        MainGrid.ColumnDefinitions[1].Width = new GridLength(_isSidebarCollapsed ? 0 : 4, GridUnitType.Pixel);
         SidebarSplitter.IsVisible = !_isSidebarCollapsed;
 
         // 收起时头部改为纵向排列：logo 居中在上，收起按钮居中在下；展开时恢复水平布局。
@@ -121,7 +124,8 @@ public partial class MainWindow : SukiWindow
         foreach (var button in GetNavigationButtons())
         {
             button.HorizontalContentAlignment = contentAlignment;
-            button.Padding = _isSidebarCollapsed ? new Thickness(0, 7) : new Thickness(12, 7);
+            button.Padding = _isSidebarCollapsed ? new Thickness(0) : new Thickness(11, 0);
+            button.Margin = _isSidebarCollapsed ? new Thickness(7, 1) : new Thickness(8, 1);
             if (button.Content is StackPanel panel)
             {
                 foreach (var text in panel.Children.OfType<TextBlock>())
@@ -190,8 +194,17 @@ public partial class MainWindow : SukiWindow
         var runningCount = _runtimeManager.RunningCount;
         FooterStatusText.Text = runningCount > 0 ? $"{runningCount} 个网络运行中" : "网络未运行";
         FooterStatusIndicator.Fill = new SolidColorBrush(runningCount > 0 ? Color.Parse("#12B76A") : Color.Parse("#98A2B3"));
-        CoreLocationText.Text = Path.GetFileName(_runtimeManager.NativeLibraryPath);
-        RunningNetworkCountText.Text = $"网络：{runningCount}";
+
+        // 状态栏同时给出运行数量和已保存网络总数，避免只显示运行数无法判断整体规模。
+        var totalCount = _profileRepository.GetAll().Count;
+        RunningNetworkCountText.Text = $"网络 {runningCount} / {totalCount}";
+
+        var nativeLibraryPath = _runtimeManager.NativeLibraryPath;
+        CoreLocationText.Text = Path.GetFileName(nativeLibraryPath);
+        ToolTip.SetTip(CoreLocationText, nativeLibraryPath);
+
+        // 原生库缺失时无法启动任何网络，状态栏直接提示，避免用户只看到启动失败。
+        FooterRuntimeText.Text = File.Exists(nativeLibraryPath) ? "原生库就绪" : "原生库缺失";
     }
 
     /// <summary>

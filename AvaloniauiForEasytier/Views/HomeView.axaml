@@ -1,123 +1,86 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AvaloniauiForEasytier.Views.HomeView">
-    <UserControl.Styles>
-        <Style Selector="TextBlock.page-title">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="TextBlock.section-title">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#667085" />
-        </Style>
-        <Style Selector="TextBlock.summary-value">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#D9DEE6" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-        </Style>
-        <Style Selector="Button.toolbar">
-            <Setter Property="Height" Value="31" />
-            <Setter Property="Padding" Value="11,5" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="Button.accent">
-            <Setter Property="Background" Value="#0F9F8F" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.outline">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="Foreground" Value="#344054" />
-            <Setter Property="BorderBrush" Value="#C7CED8" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style Selector="Button.snapshot-row">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="Padding" Value="9,7" />
-        </Style>
-    </UserControl.Styles>
 
-    <Grid Margin="18,14" RowDefinitions="38,16,Auto,14,*,12,Auto">
+    <Grid Margin="18,15,18,16" RowDefinitions="Auto,15,Auto,14,*,12,Auto">
+        <!-- 页头：标题与批量启停命令 -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Classes="page-title" Text="首页" />
-                <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="本机网络总览" />
+                <TextBlock Classes="page-caption" Text="本机网络总览" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                 <Button x:Name="StartAllButton" Classes="toolbar accent" Content="启动全部" />
                 <Button x:Name="StopAllButton" Classes="toolbar outline" Content="停止全部" />
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="10">
-            <Border Grid.Column="0" Classes="panel" Padding="13">
-                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+        <!-- 汇总指标：服务状态、网络总数和自动启动数量 -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="11">
+            <Border Grid.Column="0" Classes="panel" Padding="14,12">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="7">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Classes="section-title" Text="服务状态" />
-                        <Ellipse x:Name="SummaryStatusIndicator" Grid.Column="1" Width="8" Height="8" Fill="#98A2B3" />
+                        <Ellipse x:Name="SummaryStatusIndicator" Grid.Column="1" Width="8" Height="8" VerticalAlignment="Center" Fill="{DynamicResource AppPlaceholderBrush}" />
                     </Grid>
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                        <TextBlock x:Name="ServiceStatusValueText" Classes="summary-value" Text="未运行" />
-                        <TextBlock x:Name="ServiceStatusDescriptionText" Classes="muted" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,2" Text="0 / 0 个网络正在运行" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="9">
+                        <TextBlock x:Name="ServiceStatusValueText" Classes="metric-value" Text="未运行" />
+                        <TextBlock x:Name="ServiceStatusDescriptionText" Classes="muted" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,4" Text="运行中 0 / 0 个网络" />
                     </StackPanel>
                 </Grid>
             </Border>
-            <Border Grid.Column="1" Classes="panel" Padding="13">
-                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+            <Border Grid.Column="1" Classes="panel" Padding="14,12">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="7">
                     <TextBlock Classes="section-title" Text="网络总数" />
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                        <TextBlock x:Name="NetworkTotalValueText" Classes="summary-value" Text="0" />
-                        <TextBlock Classes="muted" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,2" Text="已保存的网络数量" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="9">
+                        <TextBlock x:Name="NetworkTotalValueText" Classes="metric-value" Text="0" />
+                        <TextBlock Classes="muted" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,4" Text="已保存的网络数量" />
                     </StackPanel>
                 </Grid>
             </Border>
-            <Border Grid.Column="2" Classes="panel" Padding="13">
-                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+            <Border Grid.Column="2" Classes="panel" Padding="14,12">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="7">
                     <TextBlock Classes="section-title" Text="自动启动" />
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                        <TextBlock x:Name="AutoStartValueText" Classes="summary-value" Text="0" />
-                        <TextBlock Classes="muted" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,2" Text="应用启动时自动连接" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="9">
+                        <TextBlock x:Name="AutoStartValueText" Classes="metric-value" Text="0" />
+                        <TextBlock Classes="muted" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,4" Text="应用启动时自动连接" />
                     </StackPanel>
                 </Grid>
             </Border>
         </Grid>
 
+        <!-- 网络快照：每行一个已保存网络，点击进入详情 -->
         <Border Grid.Row="4" Classes="panel">
-            <Grid RowDefinitions="40,*">
-                <Border Grid.Row="0" Padding="13,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
+            <Grid RowDefinitions="Auto,Auto,*">
+                <Border Grid.Row="0" Classes="panel-header">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Classes="section-title" VerticalAlignment="Center" Text="网络快照" />
                         <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center" FontSize="11" Text="点击网络进入详情" />
                     </Grid>
                 </Border>
-                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="NetworkSnapshotPanel" Margin="9,4,9,4" />
+                <Border Grid.Row="1" Classes="table-header-row" Padding="20,7">
+                    <Grid ColumnDefinitions="1.6*,1*,140,28">
+                        <TextBlock Classes="table-header" Text="网络名称" />
+                        <TextBlock Grid.Column="1" Classes="table-header" Text="虚拟网段" />
+                        <TextBlock Grid.Column="2" Classes="table-header" Text="运行状态" />
+                    </Grid>
+                </Border>
+                <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="NetworkSnapshotPanel" Margin="9,5,9,6" />
                 </ScrollViewer>
             </Grid>
         </Border>
 
+        <!-- 最近活动：来自运行时的真实输出 -->
         <Border Grid.Row="6" Classes="panel">
-            <Grid RowDefinitions="40,Auto">
-                <Border Grid.Row="0" Padding="13,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
-                    <TextBlock Classes="section-title" VerticalAlignment="Center" Text="最近活动" />
+            <Grid RowDefinitions="Auto,Auto">
+                <Border Grid.Row="0" Classes="panel-header">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="section-title" VerticalAlignment="Center" Text="最近活动" />
+                        <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center" FontSize="11" Text="完整输出见“系统日志”页" />
+                    </Grid>
                 </Border>
-                <StackPanel x:Name="RecentActivityPanel" Grid.Row="1" Margin="13,9,13,11" Spacing="6" MinHeight="28">
+                <StackPanel x:Name="RecentActivityPanel" Grid.Row="1" Margin="14,10,14,12" Spacing="6" MinHeight="26">
                     <TextBlock x:Name="RecentActivityEmptyText" Classes="muted" FontSize="11" Text="暂无网络输出" />
                 </StackPanel>
             </Grid>

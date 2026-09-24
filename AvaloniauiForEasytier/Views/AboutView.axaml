@@ -1,77 +1,53 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AvaloniauiForEasytier.Views.AboutView">
-    <UserControl.Styles>
-        <Style Selector="TextBlock.page-title">
-            <Setter Property="FontSize" Value="20" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="TextBlock.section-title">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#17212F" />
-        </Style>
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="#667085" />
-        </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#D9DEE6" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-        </Style>
-        <Style Selector="Button.outline">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="Foreground" Value="#344054" />
-            <Setter Property="BorderBrush" Value="#C7CED8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Height" Value="31" />
-            <Setter Property="Padding" Value="11,5" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-    </UserControl.Styles>
 
-    <Grid Margin="18,14" RowDefinitions="38,16,*">
+    <Grid Margin="18,15,18,16" RowDefinitions="Auto,15,*">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
             <TextBlock Classes="page-title" Text="关于" />
-            <TextBlock Classes="muted" VerticalAlignment="Bottom" Margin="0,0,0,3" FontSize="11" Text="应用信息与版本详情" />
+            <TextBlock Classes="page-caption" Text="应用信息与版本详情" />
         </StackPanel>
 
-        <Grid Grid.Row="2" ColumnDefinitions="1.05*,12,1.35*">
+        <Grid Grid.Row="2" ColumnDefinitions="1*,12,1.5*">
+            <!-- 产品标识 -->
             <Border Grid.Column="0" Classes="panel">
-                <Grid Margin="25" RowDefinitions="Auto,Auto,Auto,*,Auto">
-                    <Border Width="74" Height="74" HorizontalAlignment="Left" Background="#0F9F8F" CornerRadius="14">
-                        <PathIcon Width="40" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,10.5L10,13.5L17,6.5L18.5,8L10,16.5L5.5,12L7,10.5Z" />
+                <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto">
+                    <Border Width="66" Height="66" HorizontalAlignment="Left" Background="{DynamicResource AppAccentBrush}" CornerRadius="13">
+                        <PathIcon Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,10.5L10,13.5L17,6.5L18.5,8L10,16.5L5.5,12L7,10.5Z" />
                     </Border>
-                    <TextBlock Grid.Row="1" Margin="0,20,0,0" FontSize="24" FontWeight="SemiBold" Foreground="#17212F" Text="EasyTier" />
-                    <TextBlock Grid.Row="2" Margin="0,5,0,0" FontSize="13" Foreground="#667085" Text="跨平台桌面控制台" />
+                    <TextBlock Grid.Row="1" Margin="0,18,0,0" FontSize="23" FontWeight="SemiBold" Foreground="{DynamicResource AppTextBrush}" Text="EasyTier" />
+                    <TextBlock Grid.Row="2" Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource AppMutedBrush}" Text="跨平台桌面控制台" />
                     <StackPanel Grid.Row="4" Spacing="5">
-                        <TextBlock FontSize="12" Foreground="#344054" Text="版本 0.1.0" />
-                        <TextBlock Classes="muted" FontSize="11" Text="用于管理 EasyTier 虚拟网络服务" />
+                        <TextBlock x:Name="ProductVersionText" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="版本 --" />
+                        <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="用于管理 EasyTier 虚拟网络服务" />
                     </StackPanel>
                 </Grid>
             </Border>
 
+            <!-- 版本与运行环境 -->
             <Border Grid.Column="2" Classes="panel">
-                <Grid RowDefinitions="42,*">
-                    <Border Grid.Row="0" Padding="15,0" BorderBrush="#D9DEE6" BorderThickness="0,0,0,1">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0" Classes="panel-header" Padding="16,0">
                         <TextBlock Classes="section-title" VerticalAlignment="Center" Text="版本与环境" />
                     </Border>
-                    <Grid Grid.Row="1" Margin="18,15" ColumnDefinitions="150,*" RowDefinitions="34,34,34,34,34,34" RowSpacing="4">
-                        <TextBlock Grid.Row="0" Classes="muted" FontSize="12" VerticalAlignment="Center" Text="应用版本" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" FontSize="12" VerticalAlignment="Center" Foreground="#344054" Text="0.1.0" />
-                        <TextBlock Grid.Row="1" Classes="muted" FontSize="12" VerticalAlignment="Center" Text="运行框架" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" FontSize="12" VerticalAlignment="Center" Foreground="#344054" Text=".NET 10" />
-                        <TextBlock Grid.Row="2" Classes="muted" FontSize="12" VerticalAlignment="Center" Text="界面框架" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" FontSize="12" VerticalAlignment="Center" Foreground="#344054" Text="Avalonia UI 12.0.4" />
-                        <TextBlock Grid.Row="3" Classes="muted" FontSize="12" VerticalAlignment="Center" Text="主题组件" />
-                        <TextBlock Grid.Row="3" Grid.Column="1" FontSize="12" VerticalAlignment="Center" Foreground="#344054" Text="SukiUI 7.0.1" />
-                        <TextBlock Grid.Row="4" Classes="muted" FontSize="12" VerticalAlignment="Center" Text="支持平台" />
-                        <TextBlock Grid.Row="4" Grid.Column="1" FontSize="12" VerticalAlignment="Center" Foreground="#344054" Text="Windows / Linux" />
-                        <TextBlock Grid.Row="5" Classes="muted" FontSize="12" VerticalAlignment="Center" Text="服务核心" />
-                        <TextBlock Grid.Row="5" Grid.Column="1" FontSize="12" VerticalAlignment="Center" Foreground="#344054" Text="EasyTier Core（待检测）" />
+                    <Grid Grid.Row="1" Margin="18,14" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+                        <TextBlock Grid.Row="0" Classes="muted" FontSize="12" Text="应用版本" />
+                        <TextBlock x:Name="AppVersionValueText" Grid.Row="0" Grid.Column="1" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                        <TextBlock Grid.Row="1" Classes="muted" FontSize="12" Text="运行框架" />
+                        <TextBlock x:Name="FrameworkValueText" Grid.Row="1" Grid.Column="1" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                        <TextBlock Grid.Row="2" Classes="muted" FontSize="12" Text="界面框架" />
+                        <TextBlock x:Name="UiFrameworkValueText" Grid.Row="2" Grid.Column="1" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                        <TextBlock Grid.Row="3" Classes="muted" FontSize="12" Text="主题组件" />
+                        <TextBlock x:Name="ThemeValueText" Grid.Row="3" Grid.Column="1" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                        <TextBlock Grid.Row="4" Classes="muted" FontSize="12" Text="当前系统" />
+                        <TextBlock x:Name="OperatingSystemValueText" Grid.Row="4" Grid.Column="1" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" TextWrapping="Wrap" Text="--" />
+                        <TextBlock Grid.Row="5" Classes="muted" FontSize="12" Text="处理器架构" />
+                        <TextBlock x:Name="ArchitectureValueText" Grid.Row="5" Grid.Column="1" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                        <TextBlock Grid.Row="6" Classes="muted" FontSize="12" Text="EasyTier 原生库" />
+                        <StackPanel x:Name="NativeLibraryPanel" Grid.Row="6" Grid.Column="1" Spacing="3">
+                            <TextBlock x:Name="NativeLibraryStatusText" FontSize="12" Foreground="{DynamicResource AppTextStrongBrush}" Text="--" />
+                            <TextBlock x:Name="NativeLibraryPathText" Classes="hint mono" TextWrapping="Wrap" Text="" />
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>

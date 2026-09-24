@@ -12,112 +12,53 @@
                  Height="780"
                  MinWidth="1000"
                  MinHeight="650"
-                 Background="#F1F3F5"
+                 Background="{DynamicResource AppWorkspaceBrush}"
                  CanResize="True"
                  IsTitleBarVisible="True"
                  WindowStartupLocation="CenterScreen">
 
-    <suki:SukiWindow.Resources>
-        <SolidColorBrush x:Key="WorkspaceBrush" Color="#F1F3F5" />
-        <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="PanelAltBrush" Color="#F7F8FA" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#D9DEE6" />
-        <SolidColorBrush x:Key="TextBrush" Color="#17212F" />
-        <SolidColorBrush x:Key="MutedTextBrush" Color="#667085" />
-        <SolidColorBrush x:Key="NavigationBrush" Color="#202936" />
-        <SolidColorBrush x:Key="NavigationHoverBrush" Color="#2B3645" />
-        <SolidColorBrush x:Key="NavigationSelectedBrush" Color="#344355" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#0F9F8F" />
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#0B887B" />
-        <SolidColorBrush x:Key="WarningBrush" Color="#D97706" />
-    </suki:SukiWindow.Resources>
-
-    <suki:SukiWindow.Styles>
-        <Style Selector="TextBlock.shell-title">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-        <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
-        </Style>
-        <Style Selector="Button.nav">
-            <Setter Property="Height" Value="38" />
-            <Setter Property="Margin" Value="7,2" />
-            <Setter Property="Padding" Value="12,7" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#C7D0DC" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="FontSize" Value="13" />
-        </Style>
-        <Style Selector="Button.nav:pointerover">
-            <Setter Property="Background" Value="{StaticResource NavigationHoverBrush}" />
-        </Style>
-        <Style Selector="Button.nav.selected">
-            <Setter Property="Background" Value="{StaticResource NavigationSelectedBrush}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.toolbar">
-            <Setter Property="MinHeight" Value="31" />
-            <Setter Property="Padding" Value="11,5" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="Button.start">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.flat">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-        </Style>
-    </suki:SukiWindow.Styles>
-
-    <DockPanel Background="{StaticResource WorkspaceBrush}" LastChildFill="True">
+    <DockPanel Background="{DynamicResource AppWorkspaceBrush}" LastChildFill="True">
+        <!-- 底部状态栏：实时反映运行网络数量和原生库状态 -->
         <Border DockPanel.Dock="Bottom"
-                Height="27"
-                Padding="9,0"
-                Background="{StaticResource PanelAltBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Height="26"
+                Padding="10,0"
+                Background="{DynamicResource AppPanelAltBrush}"
+                BorderBrush="{DynamicResource AppOutlineBrush}"
                 BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="Auto,Auto,1,Auto,*,Auto,1,Auto">
-                <Ellipse x:Name="FooterStatusIndicator" Grid.Column="0" Width="7" Height="7" Margin="0,0,7,0" VerticalAlignment="Center" Fill="{StaticResource WarningBrush}" />
-                <TextBlock x:Name="FooterStatusText" Grid.Column="1" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedTextBrush}" Text="服务未运行" />
-                <Border Grid.Column="2" Width="1" Height="14" Margin="12,0" Background="{StaticResource BorderBrush}" />
-                <TextBlock x:Name="RunningNetworkCountText" Grid.Column="3" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedTextBrush}" Text="网络：0" />
-                <TextBlock Grid.Column="5" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedTextBrush}" Text="上传 0 B/s   下载 0 B/s" />
-                <Border Grid.Column="6" Width="1" Height="14" Margin="12,0" Background="{StaticResource BorderBrush}" />
-                <TextBlock Grid.Column="7" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource MutedTextBrush}" Text="就绪" />
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                <Ellipse x:Name="FooterStatusIndicator" Grid.Column="0" Width="7" Height="7" Margin="0,0,7,0" VerticalAlignment="Center" Fill="{DynamicResource AppPlaceholderBrush}" />
+                <TextBlock x:Name="FooterStatusText" Grid.Column="1" Classes="status-bar-text" Text="网络未运行" />
+                <Border Grid.Column="2" Classes="status-bar-divider" />
+                <TextBlock x:Name="RunningNetworkCountText" Grid.Column="3" Classes="status-bar-text" Text="网络 0 / 0" />
+                <TextBlock x:Name="FooterRuntimeText" Grid.Column="5" Classes="status-bar-text" Text="原生库检测中" />
             </Grid>
         </Border>
 
         <Grid x:Name="MainGrid">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="184" />
-                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="184" MinWidth="84" MaxWidth="280" />
+                <ColumnDefinition Width="4" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="{StaticResource NavigationBrush}" BorderBrush="#121923" BorderThickness="0,0,1,0">
+
+            <Border Grid.Column="0" Background="{DynamicResource AppNavBrush}" BorderBrush="{DynamicResource AppNavEdgeBrush}" BorderThickness="0,0,1,0">
                 <Grid RowDefinitions="Auto,Auto,*,Auto">
-                    <Grid x:Name="SidebarHeaderGrid" Margin="12,15,10,12" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
-                        <Border x:Name="SidebarLogo" Grid.Row="0" Grid.Column="0" Width="30" Height="30" Background="{StaticResource AccentBrush}" CornerRadius="6">
+                    <Grid x:Name="SidebarHeaderGrid" Margin="12,14,10,11" RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+                        <Border x:Name="SidebarLogo" Grid.Row="0" Grid.Column="0" Width="30" Height="30" Background="{DynamicResource AppAccentBrush}" CornerRadius="6">
                             <PathIcon Width="17" Height="17" Foreground="White" Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,10.5L10,13.5L17,6.5L18.5,8L10,16.5L5.5,12L7,10.5Z" />
                         </Border>
-                        <StackPanel x:Name="SidebarTitlePanel" Grid.Row="0" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center" Spacing="0">
-                            <TextBlock Classes="shell-title" Text="EasyTier" />
-                            <TextBlock FontSize="10" Foreground="#91A0B2" Text="桌面控制台" />
+                        <StackPanel x:Name="SidebarTitlePanel" Grid.Row="0" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center" Spacing="1">
+                            <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="White" Text="EasyTier" />
+                            <TextBlock FontSize="10" Foreground="{DynamicResource AppNavTitleBrush}" Text="桌面控制台" />
                         </StackPanel>
-                        <Button x:Name="SidebarToggleButton" Grid.Row="0" Grid.Column="2" Width="26" Height="26" Padding="4" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" ToolTip.Tip="收起侧边栏">
-                            <PathIcon Width="15" Height="15" Foreground="#91A0B2" Data="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
+                        <Button x:Name="SidebarToggleButton" Grid.Row="0" Grid.Column="2" Classes="icon" Width="26" Height="26" MinWidth="26" MinHeight="26" VerticalAlignment="Center" ToolTip.Tip="收起侧边栏">
+                            <PathIcon Width="15" Height="15" Foreground="{DynamicResource AppNavTitleBrush}" Data="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
                         </Button>
                     </Grid>
-                    <Border Grid.Row="1" Height="1" Margin="10,0,10,8" Background="#334050" />
+                    <Border Grid.Row="1" Height="1" Margin="10,0,10,7" Background="{DynamicResource AppNavDividerBrush}" />
+
                     <StackPanel Grid.Row="2">
-                        <TextBlock x:Name="WorkspaceGroupHeader" Margin="16,9,0,5" FontSize="10" FontWeight="SemiBold" Foreground="#76869A" Text="工作区" />
+                        <TextBlock x:Name="WorkspaceGroupHeader" Classes="nav-group" Text="工作区" />
                         <Button x:Name="HomeNavigationButton" Classes="nav selected" Tag="home" ToolTip.Tip="首页">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <PathIcon Width="16" Height="16" Data="M3,13H11V3H3V13M3,21H11V15H3V21M13,21H21V11H13V21M13,3V9H21V3H13Z" />
@@ -142,7 +83,7 @@
                                 <TextBlock VerticalAlignment="Center" Text="系统日志" />
                             </StackPanel>
                         </Button>
-                        <TextBlock x:Name="ApplicationGroupHeader" Margin="16,20,0,5" FontSize="10" FontWeight="SemiBold" Foreground="#76869A" Text="应用" />
+                        <TextBlock x:Name="ApplicationGroupHeader" Classes="nav-group" Margin="17,18,0,4" Text="应用" />
                         <Button x:Name="SettingsNavigationButton" Classes="nav" Tag="settings" ToolTip.Tip="设置">
                             <StackPanel Orientation="Horizontal" Spacing="10">
                                 <PathIcon Width="16" Height="16" Data="M12,15.5A3.5,3.5 0 1,0 12,8.5A3.5,3.5 0 0,0 12,15.5M19.43,12.98C19.47,12.66 19.5,12.34 19.42,11L21.54,9.37L19.54,5.9L17.05,6.91C16.53,6.5 15.96,6.17 15.34,5.92L15,3.27H11L10.66,5.92C10.04,6.17 9.46,6.5 8.95,6.91L6.46,5.9L4.46,9.37L6.58,11C6.53,11.33 6.5,11.66 6.58,12.98L4.46,14.63L6.46,18.1L8.95,17.08C9.46,17.5 10.04,17.83 10.66,18.08L11,20.73H15L15.34,18.08C15.96,17.82 16.53,17.5 17.05,17.08L19.54,18.1L21.54,14.63L19.43,12.98Z" />
@@ -156,16 +97,19 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                    <Border x:Name="CoreInfoCard" Grid.Row="3" Margin="10" Padding="9" Background="#18212C" BorderBrush="#334050" BorderThickness="1" CornerRadius="5">
+
+                    <Border x:Name="CoreInfoCard" Grid.Row="3" Margin="10" Padding="9" Background="{DynamicResource AppNavCardBrush}" BorderBrush="{DynamicResource AppNavDividerBrush}" BorderThickness="1" CornerRadius="5">
                         <StackPanel Spacing="3">
                             <TextBlock FontSize="11" Foreground="#D5DCE5" Text="EasyTier Core" />
-                            <TextBlock x:Name="CoreLocationText" FontSize="10" Foreground="#77879A" Text="路径等待检测" />
+                            <TextBlock x:Name="CoreLocationText" FontSize="10" Foreground="{DynamicResource AppNavMutedBrush}" TextTrimming="CharacterEllipsis" Text="路径等待检测" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </Border>
-            <GridSplitter x:Name="SidebarSplitter" Grid.Column="1" Width="5" Background="#E4E7EC" ResizeDirection="Columns" />
-            <Border Grid.Column="2" Margin="14,12,14,10" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
+
+            <GridSplitter x:Name="SidebarSplitter" Grid.Column="1" Width="4" Background="{DynamicResource AppWorkspaceBrush}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Margin="12,12,14,10" Classes="panel">
                 <ContentControl x:Name="PageHost" />
             </Border>
         </Grid>

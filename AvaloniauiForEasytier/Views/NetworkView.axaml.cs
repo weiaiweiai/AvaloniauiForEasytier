@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -22,6 +23,8 @@ public partial class NetworkView : UserControl
     private static readonly IBrush StatusTransitionBrush = new SolidColorBrush(Color.Parse("#D97706"));
     private static readonly IBrush StatusFailedBrush = new SolidColorBrush(Color.Parse("#F04438"));
     private static readonly IBrush StatusStoppedBrush = new SolidColorBrush(Color.Parse("#98A2B3"));
+    private static readonly IBrush StrongTextBrush = new SolidColorBrush(Color.Parse("#344054"));
+    private static readonly IBrush MutedTextBrush = new SolidColorBrush(Color.Parse("#667085"));
 
     private readonly NetworkProfileRepository? _repository;
     private readonly ServerEndpointRepository? _serverRepository;
@@ -47,6 +50,7 @@ public partial class NetworkView : UserControl
         _runtimeManager = runtimeManager ?? throw new ArgumentNullException(nameof(runtimeManager));
         InitializeComponent();
         NewNetworkButton.Click += NewNetworkButton_Click;
+        EmptyStateNewNetworkButton.Click += NewNetworkButton_Click;
         StartNetworkButton.Click += StartNetworkButton_Click;
         DeleteNetworkButton.Click += DeleteNetworkButton_Click;
         SaveProfileButton.Click += SaveProfileButton_Click;
@@ -123,11 +127,11 @@ public partial class NetworkView : UserControl
             {
                 var hint = new TextBlock
                 {
-                    Classes = { "muted" },
-                    Text = "暂无网络，点击上方“新建网络”创建",
-                    FontSize = 12,
+                    Classes = { "empty-caption" },
+                    Text = "暂无网络，点击右上角加号创建",
+                    FontSize = 11,
                     TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(2, 8)
+                    Margin = new Thickness(2, 10)
                 };
                 NetworkSidebarPanel.Children.Add(hint);
             }
@@ -161,17 +165,18 @@ public partial class NetworkView : UserControl
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
         grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(32, GridUnitType.Pixel)));
 
-        var selectButton = new Button
+        // 选中区使用 Border 承载内容：Button 模板会按内容宽度收缩，导致名称无法占满条目宽度。
+        var selectButton = new Border
         {
             Classes = { "item-select" },
-            Content = BuildSidebarItemContent(profile, status),
+            Child = BuildSidebarItemContent(profile, status),
             Tag = profile.Id
         };
-        selectButton.Click += SidebarItemButton_Click;
+        selectButton.PointerPressed += SidebarItem_PointerPressed;
         grid.Children.Add(selectButton);
 
         var quickButton = CreateQuickToggleButton(profile.Id, status);
-        quickButton.Margin = new Thickness(0, 0, 4, 0);
+        quickButton.Margin = new Thickness(0, 0, 5, 0);
         Grid.SetColumn(quickButton, 1);
         grid.Children.Add(quickButton);
 
@@ -241,13 +246,13 @@ public partial class NetworkView : UserControl
     /// <returns>条目内容控件，类型为 Control。</returns>
     private static Control BuildSidebarItemContent(NetworkProfile profile, CoreProcessStatus status)
     {
-        var content = new StackPanel { Spacing = 3 };
+        var content = new StackPanel { Spacing = 4 };
         content.Children.Add(new TextBlock
         {
             Text = profile.ProfileName,
             FontSize = 12,
             FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Color.Parse("#344054")),
+            Foreground = StrongTextBrush,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
 
@@ -265,7 +270,7 @@ public partial class NetworkView : UserControl
         {
             Text = subnet is null ? GetStatusText(status) : $"{GetStatusText(status)} · {subnet}",
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.Parse("#667085")),
+            Foreground = MutedTextBrush,
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
@@ -280,29 +285,29 @@ public partial class NetworkView : UserControl
     /// <returns>临时条目控件，类型为 Border。</returns>
     private static Border BuildUnsavedSidebarItem(string profileName)
     {
-        var content = new StackPanel { Spacing = 3 };
+        var content = new StackPanel { Spacing = 4 };
         content.Children.Add(new TextBlock
         {
             Text = profileName,
             FontSize = 12,
             FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Color.Parse("#98A2B3")),
+            Foreground = StrongTextBrush,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        content.Children.Add(new TextBlock
-        {
-            Text = "未保存",
-            FontSize = 10,
-            Foreground = new SolidColorBrush(Color.Parse("#98A2B3"))
-        });
+
+        // 未保存条目用虚线描边和徽标标记，与已保存网络在视觉上明确区分。
+        var badge = new Border { Classes = { "badge", "warning" }, HorizontalAlignment = HorizontalAlignment.Left };
+        badge.Child = new TextBlock { Text = "未保存" };
+        content.Children.Add(badge);
+
         return new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#F7F8FA")),
+            Background = new SolidColorBrush(Color.Parse("#FBFCFD")),
             BorderBrush = new SolidColorBrush(Color.Parse("#D9DEE6")),
             BorderThickness = new Thickness(1),
             CornerRadius = new Avalonia.CornerRadius(5),
             Padding = new Thickness(9, 8),
-            Margin = new Thickness(0, 0, 0, 5),
+            Margin = new Thickness(0, 0, 0, 3),
             Child = content
         };
     }
@@ -310,11 +315,15 @@ public partial class NetworkView : UserControl
     /// <summary>
     /// 响应侧边栏网络条目点击并选中该网络。
     /// </summary>
-    /// <param name="sender">触发事件的条目按钮，类型为对象，可为空，非必填。</param>
-    /// <param name="e">路由事件参数，类型为 RoutedEventArgs，不可为空，必填。</param>
-    private void SidebarItemButton_Click(object? sender, RoutedEventArgs e)
+    /// <param name="sender">触发事件的条目容器，类型为对象，可为空，非必填。</param>
+    /// <param name="e">指针按下事件参数，类型为 PointerPressedEventArgs，不可为空，必填。</param>
+    private void SidebarItem_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Button { Tag: long profileId }) OpenNetworkDetail(profileId);
+        // 只响应鼠标左键，避免右键或中键误切换选中网络。
+        if (sender is Border { Tag: long profileId } && e.GetCurrentPoint(null).Properties.IsLeftButtonPressed)
+        {
+            OpenNetworkDetail(profileId);
+        }
     }
 
     /// <summary>清除选择并显示空状态。</summary>
@@ -676,28 +685,32 @@ public partial class NetworkView : UserControl
     /// <param name="reason">占位说明文本，类型为字符串，取值为非空原因描述，必填。</param>
     private void RenderEmptyDataTabs(string reason)
     {
-        RenderHintPanel(PeersRowsPanel, reason);
-        RenderHintPanel(RoutesRowsPanel, reason);
+        // 没有可展示的数据时保留表头，让用户仍能看到表格结构。
+        PeersRowsPanel.Children.Clear();
+        PeersRowsPanel.Children.Add(BuildPeerHeaderRow());
+        PeersRowsPanel.Children.Add(BuildTableHint(reason));
+        RoutesRowsPanel.Children.Clear();
+        RoutesRowsPanel.Children.Add(BuildRouteHeaderRow());
+        RoutesRowsPanel.Children.Add(BuildTableHint(reason));
         PeersUpdatedText.Text = string.Empty;
         RoutesUpdatedText.Text = string.Empty;
     }
 
     /// <summary>
-    /// 在指定表格容器中写入占位说明。
+    /// 构建表格内的居中占位说明。
     /// </summary>
-    /// <param name="panel">表格行容器，类型为 StackPanel，不可为空，必填。</param>
     /// <param name="reason">占位说明文本，类型为字符串，取值为非空原因描述，必填。</param>
-    private static void RenderHintPanel(StackPanel panel, string reason)
+    /// <returns>占位说明控件，类型为 TextBlock。</returns>
+    private static TextBlock BuildTableHint(string reason)
     {
-        panel.Children.Clear();
-        panel.Children.Add(new TextBlock
+        return new TextBlock
         {
-            Classes = { "muted" },
+            Classes = { "empty-title" },
             Text = reason,
             FontSize = 12,
-            Margin = new Thickness(0, 12),
-            HorizontalAlignment = HorizontalAlignment.Center
-        });
+            Margin = new Thickness(18, 26),
+            TextWrapping = TextWrapping.Wrap
+        };
     }
 
     /// <summary>
@@ -709,10 +722,10 @@ public partial class NetworkView : UserControl
         PeersRowsPanel.Children.Clear();
         PeersRowsPanel.Children.Add(BuildPeerHeaderRow());
 
-        // 实例已运行但还没有节点上报时显示空态提示。
+        // 实例已运行但还没有节点上报时在表头下方显示空态提示。
         if (snapshot.Nodes.Count == 0)
         {
-            RenderHintPanel(PeersRowsPanel, "暂无节点数据");
+            PeersRowsPanel.Children.Add(BuildTableHint("暂无节点数据"));
             return;
         }
 
@@ -731,10 +744,10 @@ public partial class NetworkView : UserControl
         RoutesRowsPanel.Children.Clear();
         RoutesRowsPanel.Children.Add(BuildRouteHeaderRow());
 
-        // 实例已运行但还没有路由上报时显示空态提示。
+        // 实例已运行但还没有路由上报时在表头下方显示空态提示。
         if (snapshot.Routes.Count == 0)
         {
-            RenderHintPanel(RoutesRowsPanel, "暂无路由数据");
+            RoutesRowsPanel.Children.Add(BuildTableHint("暂无路由数据"));
             return;
         }
 
@@ -881,9 +894,7 @@ public partial class NetworkView : UserControl
     {
         return new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#F7F8FA")),
-            CornerRadius = new Avalonia.CornerRadius(5),
-            Padding = new Thickness(10, 7),
+            Classes = { "table-header-row" },
             Child = grid
         };
     }
@@ -897,9 +908,7 @@ public partial class NetworkView : UserControl
     {
         return new Border
         {
-            BorderBrush = new SolidColorBrush(Color.Parse("#EEF1F5")),
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(10, 8),
+            Classes = { "table-row" },
             Child = grid
         };
     }
@@ -945,7 +954,7 @@ public partial class NetworkView : UserControl
         {
             DetailTitleText.Text = "未选择网络";
             DetailInstanceText.Text = "实例：--";
-            DetailStatusText.Text = "已停止";
+            ApplyStatusBadge(CoreProcessStatus.Stopped);
             return;
         }
 
@@ -953,12 +962,37 @@ public partial class NetworkView : UserControl
         DetailTitleText.Text = profile.Id == 0 ? $"{profile.ProfileName}（未保存）" : profile.ProfileName;
         DetailInstanceText.Text = $"实例：{profile.InstanceName}";
         var status = _runtimeManager?.GetStatus(profile.InstanceName) ?? CoreProcessStatus.Stopped;
-        DetailStatusText.Text = GetStatusText(status);
+        ApplyStatusBadge(status);
 
         // 头部按钮随状态切换：运行或切换中显示停止并禁用删除，其余显示启动。
         var isStopAction = status is CoreProcessStatus.Running or CoreProcessStatus.Starting or CoreProcessStatus.Stopping;
         StartNetworkButton.Content = isStopAction ? "停止网络" : "启动网络";
         DeleteNetworkButton.IsEnabled = !isStopAction;
+    }
+
+    /// <summary>
+    /// 按运行状态切换详情头部状态徽标的文字和配色。
+    /// </summary>
+    /// <param name="status">运行状态，类型为 CoreProcessStatus，取值为枚举定义的状态，必填。</param>
+    private void ApplyStatusBadge(CoreProcessStatus status)
+    {
+        DetailStatusText.Text = GetStatusText(status);
+
+        // 先移除全部状态类，再按当前状态追加，避免多次切换后类名叠加。
+        DetailStatusBadge.Classes.Remove("running");
+        DetailStatusBadge.Classes.Remove("warning");
+        DetailStatusBadge.Classes.Remove("danger");
+        var variantClass = status switch
+        {
+            CoreProcessStatus.Running => "running",
+            CoreProcessStatus.Starting or CoreProcessStatus.Stopping => "warning",
+            CoreProcessStatus.Failed => "danger",
+            _ => null
+        };
+        if (variantClass is not null)
+        {
+            DetailStatusBadge.Classes.Add(variantClass);
+        }
     }
 
     /// <summary>

@@ -5,5 +5,7 @@
              RequestedThemeVariant="Light">
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Green" />
+        <!-- 桌面端统一设计令牌与控件样式，放在主题之后以便覆盖默认视觉。 -->
+        <StyleInclude Source="avares://AvaloniauiForEasytier/Styles/DesktopTheme.axaml" />
     </Application.Styles>
 </Application>

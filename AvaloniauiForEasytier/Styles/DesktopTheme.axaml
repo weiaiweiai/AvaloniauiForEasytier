@@ -1,0 +1,387 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <!-- 工作区与面板底色 -->
+        <SolidColorBrush x:Key="AppWorkspaceBrush" Color="#F1F3F5" />
+        <SolidColorBrush x:Key="AppPanelBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="AppPanelAltBrush" Color="#F7F8FA" />
+        <SolidColorBrush x:Key="AppPanelSubtleBrush" Color="#FBFCFD" />
+        <SolidColorBrush x:Key="AppRowHoverBrush" Color="#F2F5F7" />
+        <SolidColorBrush x:Key="AppOutlineBrush" Color="#D9DEE6" />
+        <SolidColorBrush x:Key="AppOutlineSubtleBrush" Color="#EEF1F5" />
+        <SolidColorBrush x:Key="AppOutlineStrongBrush" Color="#C7CED8" />
+
+        <!-- 文本层级 -->
+        <SolidColorBrush x:Key="AppTextBrush" Color="#17212F" />
+        <SolidColorBrush x:Key="AppTextStrongBrush" Color="#344054" />
+        <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#475467" />
+        <SolidColorBrush x:Key="AppMutedBrush" Color="#667085" />
+        <SolidColorBrush x:Key="AppPlaceholderBrush" Color="#98A2B3" />
+
+        <!-- 侧边导航 -->
+        <SolidColorBrush x:Key="AppNavBrush" Color="#202936" />
+        <SolidColorBrush x:Key="AppNavEdgeBrush" Color="#121923" />
+        <SolidColorBrush x:Key="AppNavHoverBrush" Color="#2B3645" />
+        <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#344355" />
+        <SolidColorBrush x:Key="AppNavTextBrush" Color="#C7D0DC" />
+        <SolidColorBrush x:Key="AppNavTitleBrush" Color="#91A0B2" />
+        <SolidColorBrush x:Key="AppNavMutedBrush" Color="#76869A" />
+        <SolidColorBrush x:Key="AppNavCardBrush" Color="#18212C" />
+        <SolidColorBrush x:Key="AppNavDividerBrush" Color="#334050" />
+
+        <!-- 强调色与状态色 -->
+        <SolidColorBrush x:Key="AppAccentBrush" Color="#0F9F8F" />
+        <SolidColorBrush x:Key="AppAccentHoverBrush" Color="#0D9284" />
+        <SolidColorBrush x:Key="AppAccentPressedBrush" Color="#0B7C70" />
+        <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#E7F5F2" />
+        <SolidColorBrush x:Key="AppAccentTextBrush" Color="#0F766E" />
+        <SolidColorBrush x:Key="AppSuccessBrush" Color="#12B76A" />
+        <SolidColorBrush x:Key="AppSuccessSoftBrush" Color="#E7F6EE" />
+        <SolidColorBrush x:Key="AppSuccessTextBrush" Color="#05803C" />
+        <SolidColorBrush x:Key="AppWarningBrush" Color="#D97706" />
+        <SolidColorBrush x:Key="AppWarningSoftBrush" Color="#FFF7E6" />
+        <SolidColorBrush x:Key="AppWarningTextBrush" Color="#9A5B08" />
+        <SolidColorBrush x:Key="AppDangerBrush" Color="#F04438" />
+        <SolidColorBrush x:Key="AppDangerSoftBrush" Color="#FEECEB" />
+        <SolidColorBrush x:Key="AppDangerTextBrush" Color="#B42318" />
+        <SolidColorBrush x:Key="AppNeutralSoftBrush" Color="#F0F2F5" />
+    </Styles.Resources>
+    <!-- 文字层级：页面标题、区块标题、字段标签和弱化说明 -->
+    <Style Selector="TextBlock.page-title">
+        <Setter Property="FontSize" Value="19" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.page-caption">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+        <Setter Property="Margin" Value="0,0,0,3" />
+    </Style>
+    <Style Selector="TextBlock.section-title">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.group-title">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.field-label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.hint">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Foreground" Value="{DynamicResource AppPlaceholderBrush}" />
+    </Style>
+    <Style Selector="TextBlock.metric-value">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.mono">
+        <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" />
+    </Style>
+
+    <!-- 面板容器：普通面板、次级底色面板和表单分区 -->
+    <Style Selector="Border.panel">
+        <Setter Property="Background" Value="{DynamicResource AppPanelBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="Border.panel.subtle">
+        <Setter Property="Background" Value="{DynamicResource AppPanelSubtleBrush}" />
+    </Style>
+    <Style Selector="Border.panel-header">
+        <Setter Property="Background" Value="{DynamicResource AppPanelAltBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="13,0" />
+        <Setter Property="MinHeight" Value="40" />
+    </Style>
+    <Style Selector="Border.panel-header > Grid">
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- 命令按钮：统一高度和圆角，便于工具栏横向排列 -->
+    <Style Selector="Button.toolbar">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.row-action">
+        <Setter Property="Height" Value="26" />
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="MinWidth" Value="52" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- 主操作按钮 -->
+    <Style Selector="Button.accent">
+        <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.accent:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppAccentHoverBrush}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.accent:pressed">
+        <Setter Property="Background" Value="{DynamicResource AppAccentPressedBrush}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.accent:disabled">
+        <Setter Property="Background" Value="{DynamicResource AppOutlineStrongBrush}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <!-- 次级描边按钮 -->
+    <Style Selector="Button.outline">
+        <Setter Property="Background" Value="{DynamicResource AppPanelBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextStrongBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineStrongBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.outline:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppPanelAltBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBrush}" />
+    </Style>
+    <Style Selector="Button.outline:pressed">
+        <Setter Property="Background" Value="{DynamicResource AppNeutralSoftBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    </Style>
+    <Style Selector="Button.outline:disabled">
+        <Setter Property="Background" Value="{DynamicResource AppPanelAltBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppPlaceholderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineBrush}" />
+    </Style>
+
+    <!-- 危险操作按钮：仅在删除等不可逆操作上使用 -->
+    <Style Selector="Button.danger">
+        <Setter Property="Background" Value="{DynamicResource AppPanelBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppDangerTextBrush}" />
+        <Setter Property="BorderBrush" Value="#F1A9A2" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.danger:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppDangerSoftBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppDangerTextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+    </Style>
+    <Style Selector="Button.danger:disabled">
+        <Setter Property="Background" Value="{DynamicResource AppPanelAltBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppPlaceholderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineBrush}" />
+    </Style>
+
+    <!-- 图标按钮：工具栏和列表行内的小型方形按钮 -->
+    <Style Selector="Button.icon">
+        <Setter Property="Width" Value="27" />
+        <Setter Property="Height" Value="27" />
+        <Setter Property="MinWidth" Value="27" />
+        <Setter Property="MinHeight" Value="27" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.icon:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppNeutralSoftBrush}" />
+    </Style>
+    <!-- 表格：表头、单元格与数据行 -->
+    <Style Selector="TextBlock.table-header">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style Selector="TextBlock.table-cell">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextStrongBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style Selector="TextBlock.table-cell-muted">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <Style Selector="Border.table-header-row">
+        <Setter Property="Background" Value="{DynamicResource AppPanelAltBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="11,8" />
+    </Style>
+    <Style Selector="Border.table-row">
+        <Setter Property="BorderBrush" Value="{DynamicResource AppOutlineSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="11,9" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.table-row:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppRowHoverBrush}" />
+    </Style>
+
+    <!-- 状态徽标：以柔和底色表示运行、警告、错误和中性状态 -->
+    <Style Selector="Border.badge">
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="8,3" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource AppNeutralSoftBrush}" />
+    </Style>
+    <Style Selector="Border.badge > TextBlock">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+    </Style>
+    <Style Selector="Border.badge.running">
+        <Setter Property="Background" Value="{DynamicResource AppSuccessSoftBrush}" />
+    </Style>
+    <Style Selector="Border.badge.running > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource AppSuccessTextBrush}" />
+    </Style>
+    <Style Selector="Border.badge.warning">
+        <Setter Property="Background" Value="{DynamicResource AppWarningSoftBrush}" />
+    </Style>
+    <Style Selector="Border.badge.warning > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource AppWarningTextBrush}" />
+    </Style>
+    <Style Selector="Border.badge.danger">
+        <Setter Property="Background" Value="{DynamicResource AppDangerSoftBrush}" />
+    </Style>
+    <Style Selector="Border.badge.danger > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource AppDangerTextBrush}" />
+    </Style>
+
+    <!-- 表单控件：统一最小高度使标签与输入框对齐；不固定高度，避免占位文字被裁剪 -->
+    <Style Selector="TextBox.form">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="9,5" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox.form">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- 可点击的表格行：整行响应点击并在悬停时反馈 -->
+    <Style Selector="Border.clickable-row">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="11,9" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Border.clickable-row:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppRowHoverBrush}" />
+    </Style>
+    <!-- 主侧边导航按钮 -->
+    <Style Selector="Button.nav">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Margin" Value="8,1" />
+        <Setter Property="Padding" Value="11,0" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource AppNavTextBrush}" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.nav:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppNavHoverBrush}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.nav.selected">
+        <Setter Property="Background" Value="{DynamicResource AppNavSelectedBrush}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.nav.selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppNavSelectedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.nav-group">
+        <Setter Property="Margin" Value="17,10,0,4" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AppNavMutedBrush}" />
+    </Style>
+
+    <!-- 二级列表条目：网络列表、设置类别等纵向选择列表 -->
+    <Style Selector="Button.list-item">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.list-item:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppRowHoverBrush}" />
+    </Style>
+    <Style Selector="Button.list-item.selected">
+        <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppAccentTextBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.list-item.selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
+    </Style>
+
+    <!-- 标签页：贴合桌面软件的紧凑标签栏 -->
+    <Style Selector="TabItem">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="14,6" />
+    </Style>
+    <!-- 底部状态栏：分段文字与竖线分隔符 -->
+    <Style Selector="TextBlock.status-bar-text">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.status-bar-divider">
+        <Setter Property="Width" Value="1" />
+        <Setter Property="Height" Value="13" />
+        <Setter Property="Margin" Value="12,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource AppOutlineBrush}" />
+    </Style>
+
+    <!-- 空状态：列表或表格没有数据时的居中引导区 -->
+    <Style Selector="TextBlock.empty-title">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.empty-caption">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource AppPlaceholderBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+</Styles>
